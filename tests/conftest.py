@@ -41,3 +41,22 @@ def target_wav() -> Path:
 @pytest.fixture()
 def reference_wav() -> Path:
     return FIXTURES / "reference.wav"
+
+
+def click_track(bpm: float, seconds: float, sr: int = SR) -> np.ndarray:
+    """A click train at a known tempo, so tempo detection has a ground truth."""
+    n = int(sr * seconds)
+    out = np.zeros(n, dtype=np.float32)
+    click_len = int(0.01 * sr)
+    envelope = np.exp(-np.linspace(0, 8, click_len)).astype(np.float32)
+    burst = envelope * np.sin(2 * np.pi * 1000.0 * np.arange(click_len) / sr).astype(np.float32)
+    step = int(sr * 60.0 / bpm)
+    for start in range(0, n - click_len, step):
+        out[start:start + click_len] += burst
+    return np.clip(out * 0.8, -1.0, 1.0)
+
+
+@pytest.fixture(scope="session")
+def click_120_wav(ensure_fixtures: None) -> Path:
+    """A 120 BPM click track — committed, used to pin tempo detection."""
+    return write_if_missing(FIXTURES / "click_120bpm.wav", click_track(120.0, 8.0))
