@@ -112,6 +112,62 @@ producer batch \
 
 A failure on one file is recorded as a flag rather than sinking the whole batch.
 
+### `producer benchmark --versions-dir DIR [--baseline NAME] [--out PATH]`
+
+Measure our master against commercial ones. Put the same song rendered by each
+service in one folder, named by service:
+
+```
+comparisons/my_song/
+  producer.wav
+  landr.wav
+  original.wav
+```
+
+```bash
+producer benchmark --versions-dir comparisons/my_song --out comparisons/my_song/benchmark.md
+```
+
+Reports integrated LUFS, loudness range, **true peak** (4x oversampled, so
+inter-sample overs show up), crest factor, spectral centroid, stereo
+correlation, and a six-band spectral balance — then diffs everything against
+`producer` and says which chain stage to reach for.
+
+Bands where neither version has audible content are reported as `n/a` rather
+than generating confident advice about silence.
+
+### `producer blindtest --versions-dir DIR --out-dir DIR [--seed N] [--target-lufs X]`
+
+Builds the listening test to send friends. This exists because two biases
+otherwise make informal feedback worthless:
+
+- **Loudness bias** — the louder master wins every time. Our masters run hot
+  (~−7 LUFS); LANDR targets ~−14. Unmatched, you'd be measuring gain staging.
+- **Brand bias** — "this one is LANDR" scores higher regardless of sound.
+
+So every version is gain-matched to a common LUFS target (matching *downward*
+only, so nothing clips), renamed `A.wav`/`B.wav`/…, and shuffled. The folder you
+share contains only the audio, instructions and a blank scoresheet. **The
+un-blinding key is written outside that folder** — share `--out-dir`, keep the
+key.
+
+```bash
+producer blindtest --versions-dir comparisons/my_song --out-dir blind/my_song --seed 42
+```
+
+### `producer tally --key PATH --responses PATH [--out PATH]`
+
+Un-blinds the returned scoresheets and aggregates them by source — mean
+release-ready score, mean rank, first-place votes, and every free-text note.
+Accepts one CSV or a folder of them.
+
+```bash
+producer tally --key blind/my_song.key.json --responses responses/ --out results.md
+```
+
+With fewer than three listeners the report labels itself an anecdote rather
+than a verdict.
+
 ## Tests
 
 ```bash

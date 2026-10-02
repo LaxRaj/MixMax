@@ -100,3 +100,25 @@ def batch_dir(ensure_fixtures: None) -> Path:
     write_if_missing(directory / "take_b.wav", sine(550.0, 2.0, 0.35))
     write_if_missing(directory / "take_c.wav", click_track(100.0, 3.0))
     return directory
+
+
+@pytest.fixture()
+def versions_dir(tmp_path: Path) -> Path:
+    """Three 'services' rendering the same source, with known differences.
+
+    `rival` is deliberately quieter, more dynamic and darker than `producer`,
+    so the delta maths has a ground truth to hit.
+    """
+    directory = tmp_path / "versions"
+    directory.mkdir()
+
+    base = sine(440.0, 4.0, 0.30) + sine(7000.0, 4.0, 0.08)
+
+    # producer: loud, bright, squashed.
+    sf.write(str(directory / "producer.wav"), np.clip(base * 2.2, -1.0, 1.0), SR)
+    # rival: quieter, darker (less 7 kHz), untouched dynamics.
+    rival = sine(440.0, 4.0, 0.30) + sine(7000.0, 4.0, 0.01)
+    sf.write(str(directory / "rival.wav"), rival * 0.5, SR)
+    # original: the unmastered source.
+    sf.write(str(directory / "original.wav"), base * 0.4, SR)
+    return directory

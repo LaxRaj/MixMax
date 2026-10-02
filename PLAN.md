@@ -4,7 +4,7 @@
 
 - **Success metric:** `producer batch` runs against 3–5 real vocal files from friends and produces a `report.md` with automated QA results, plus your own subjective "does this sound release-ready" verdict per file.
 - **Deadline:** ~1 week out (assumption — 6 milestones, each ≤1 day; adjust if wrong).
-- **Status:** M0–M5 built, all 26 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures.
+- **Status:** M0–M6 built, 51 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling to close that gap.
 - **Repo:** `~/Desktop/projects/MixMax` — https://github.com/LaxRaj/MixMax
 
 ## Non-goals
@@ -211,6 +211,20 @@
   - [ ] `producer batch` has been run at least once against real friend-supplied vocals — `report.md` is the artifact that answers "how good are we"
 - **Verify:** `rm -rf /tmp/clean_clone && git clone . /tmp/clean_clone && cd /tmp/clean_clone && pip install -e . && producer master --vocal tests/fixtures/target.wav --reference tests/fixtures/reference.wav --out /tmp/clean_clone/out.wav --plot`
 
+### [x] M6 — Benchmark against commercial services
+
+- **Deliverable:** `producer benchmark` diffs our master against LANDR and others; `producer blindtest` builds a loudness-matched, anonymized listening test; `producer tally` aggregates the returned scoresheets.
+- **Why this came after M5:** M5 shipped the tool; this milestone is what makes the success metric answerable. Automated QA says "legal", not "good" — only a controlled listening test says good.
+- **Acceptance criteria:**
+  - [x] Objective metrics beyond the QA gate: LRA, true peak (oversampled), crest factor, spectral balance, centroid
+  - [x] Deltas expressed as actions tied to a chain stage, not just numbers
+  - [x] Blind test is loudness-matched, attenuating only, and never clips
+  - [x] Un-blinding key is written outside the folder shared with listeners
+  - [x] `pytest` passes
+  - [ ] Run against a real producer master vs a real LANDR master of the same song
+  - [ ] At least 3 listeners returned scoresheets
+- **Verify:** `pytest -q && producer benchmark --versions-dir <dir> && producer blindtest --versions-dir <dir> --out-dir <dir>`
+
 ## Decision log
 <!-- Append-only. Format: {date} — {decision} — {why} -->
 2026-10-02 — Built M0–M5 in one pass; each milestone verified with its own `Verify` command before commit. — The plan's milestones were already sequenced and independently checkable, so there was nothing to re-plan.
@@ -220,3 +234,9 @@
 2026-10-02 — Committed the generated fixtures instead of generating them only at test time. — M5 requires the README quickstart to work from a clean clone, which needs the WAVs present before pytest has ever run.
 2026-10-02 — `report.md` carries an empty subjective-verdict table per file. — The plan's success metric is automated QA *plus* a human "release-ready" call; the report is where that belongs.
 2026-10-02 — Deferred all real-vocal acceptance criteria. — No friend-supplied audio available in this environment; synthetic fixtures cannot answer "does this sound release-ready".
+
+2026-10-02 — Added M6 (benchmark + blind listening test) beyond the original six milestones. — The plan's success metric needs a comparison baseline and friend feedback; both need tooling that didn't exist.
+2026-10-02 — Blind tests gain-match downward to the quietest version, never upward. — Boosting risks clipping and alters character; attenuation is transparent, so the comparison stays honest.
+2026-10-02 — The un-blinding key is written outside `--out-dir`. — If the key ships alongside the audio, one careless folder share destroys the blind.
+2026-10-02 — Band deltas below -45 dB relative to total are reported `n/a`. — Comparing two inaudible bands produced confident nonsense ("+49 dB in low_mid") from what was really clipping harmonics vs silence.
+2026-10-02 — True peak is measured at 4x oversampling, not sample peak. — Our own demo master read -0.0 dBFS by sample peak but +0.13 dBTP true peak, which distorts after lossy encoding.

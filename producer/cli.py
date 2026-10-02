@@ -10,6 +10,8 @@ import click
 
 from producer.analysis import analyze_vocal
 from producer.batch import run_batch
+from producer.benchmark import build_benchmark_report, compare, discover_versions
+from producer.blindtest import build_blind_test, build_tally_report, tally
 from producer.audio import human_size
 from producer.mastering import master_track
 from producer.mix import mix_vocal
@@ -106,3 +108,76 @@ def batch(input_dir: Path, reference: Path, out_dir: Path) -> None:
         click.echo(f"  {verdict}  {r['filename']}")
     click.echo(f"{passed}/{len(results)} passed automated QA")
     click.echo(f"Report -> {out_dir / 'report.md'}")
+
+
+@cli.command()
+@click.option("--versions-dir", required=True, type=IN_DIR,
+              help="Folder with one file per service, e.g. producer.wav / landr.wav.")
+@click.option("--baseline", default="producer", show_default=True,
+              help="Which version to diff the others against.")
+@click.option("--out", "out_path", type=OUT_FILE, help="Write the markdown report here.")
+def benchmark(versions_dir: Path, baseline: str, out_path: Path | None) -> None:
+    """Measure our master against commercial ones and say where it differs."""
+    versions = discover_versions(versions_dir)
+    if len(versions) < 2:
+        raise click.ClickException(
+            f"Need at least two versions to compare; found {len(versions)} in {versions_dir}."
+        )
+    if baseline not in versions:
+        raise click.ClickException(
+            f"Baseline '{baseline}' not found. Available: {', '.join(sorted(versions))}."
+        )
+
+    comparison = compare(versions, baseline=baseline)
+    report = build_benchmark_report(comparison, title=f"Benchmark — {versions_dir.name}")
+
+    if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report)
+        click.echo(f"Benchmark -> {out_path}")
+    else:
+        click.echo(report)
+
+
+@cli.command()
+@click.option("--versions-dir", required=True, type=IN_DIR, help="Folder with one file per service.")
+@click.option("--out-dir", required=True, type=OUT_DIR, help="Share this folder with listeners.")
+@click.option("--key", "key_path", type=OUT_FILE,
+              help="Where the un-blinding key goes. Defaults to a sibling of --out-dir.")
+@click.option("--target-lufs", type=float, help="Match to this loudness instead of the quietest version.")
+@click.option("--seed", type=int, help="Seed the label shuffle, for a reproducible test.")
+def blindtest(versions_dir: Path, out_dir: Path, key_path: Path | None,
+              target_lufs: float | None, seed: int | None) -> None:
+    """Build a loudness-matched, anonymized listening test for friends."""
+    versions = discover_versions(versions_dir)
+    try:
+        result = build_blind_test(versions, out_dir, key_path, target_lufs, seed)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"Matched everything to {result['target_lufs']} LUFS:")
+    for version in result["versions"]:
+        click.echo(f"  {version['label']}  <- {version['source']}"
+                   f"  ({version['original_lufs']} LUFS, {version['applied_gain_db']:+} dB)")
+    click.echo(f"Share -> {result['out_dir']}")
+    click.secho(f"Keep the key private -> {result['key_path']}", fg="yellow")
+
+
+@cli.command(name="tally")
+@click.option("--key", "key_path", required=True, type=EXISTING_FILE, help="The key written by blindtest.")
+@click.option("--responses", required=True, type=click.Path(exists=True, path_type=Path),
+              help="A filled scoresheet CSV, or a folder of them.")
+@click.option("--out", "out_path", type=OUT_FILE, help="Write the markdown results here.")
+def tally_cmd(key_path: Path, responses: Path, out_path: Path | None) -> None:
+    """Un-blind the returned scoresheets and aggregate them."""
+    result = tally(key_path, responses)
+    if not result["rows"]:
+        raise click.ClickException(f"No usable rows found in {responses}.")
+
+    report = build_tally_report(result)
+    if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report)
+        click.echo(f"Results -> {out_path}")
+    else:
+        click.echo(report)
