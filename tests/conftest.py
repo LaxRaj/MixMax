@@ -90,3 +90,13 @@ def out_of_phase_wav(ensure_fixtures: None) -> Path:
     left = sine(440.0, 2.0, 0.3)
     stereo = np.stack([left, -left], axis=1)
     return write_if_missing(FIXTURES / "out_of_phase.wav", stereo)
+
+
+@pytest.fixture(scope="session")
+def batch_dir(ensure_fixtures: None) -> Path:
+    """A small folder of committed fixtures for the batch harness."""
+    directory = FIXTURES / "batch"
+    write_if_missing(directory / "take_a.wav", sine(330.0, 2.0, 0.25))
+    write_if_missing(directory / "take_b.wav", sine(550.0, 2.0, 0.35))
+    write_if_missing(directory / "take_c.wav", click_track(100.0, 3.0))
+    return directory

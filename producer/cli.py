@@ -9,6 +9,7 @@ from pathlib import Path
 import click
 
 from producer.analysis import analyze_vocal
+from producer.batch import run_batch
 from producer.audio import human_size
 from producer.mastering import master_track
 from producer.mix import mix_vocal
@@ -16,6 +17,8 @@ from producer.qa import run_qa
 
 EXISTING_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
 OUT_FILE = click.Path(dir_okay=False, path_type=Path)
+IN_DIR = click.Path(exists=True, file_okay=False, path_type=Path)
+OUT_DIR = click.Path(file_okay=False, path_type=Path)
 
 
 @click.group()
@@ -78,3 +81,22 @@ def echo_qa(report: dict) -> None:
 def qa(file_path: Path) -> None:
     """Run the automated QA gate against FILE and print the report as JSON."""
     click.echo(json.dumps(run_qa(file_path), indent=2))
+
+
+@cli.command()
+@click.option("--input-dir", required=True, type=IN_DIR, help="Folder of vocals.")
+@click.option("--reference", required=True, type=EXISTING_FILE, help="Shared reference track.")
+@click.option("--out-dir", required=True, type=OUT_DIR, help="Where masters and report.md go.")
+def batch(input_dir: Path, reference: Path, out_dir: Path) -> None:
+    """Run the full pipeline over every file in INPUT_DIR and write report.md."""
+    results = run_batch(input_dir, reference, out_dir)
+    if not results:
+        click.echo(f"No .wav/.mp3 files found in {input_dir}")
+        return
+
+    passed = sum(1 for r in results if r["qa"].get("pass"))
+    for r in results:
+        verdict = "PASS" if r["qa"].get("pass") else "FAIL"
+        click.echo(f"  {verdict}  {r['filename']}")
+    click.echo(f"{passed}/{len(results)} passed automated QA")
+    click.echo(f"Report -> {out_dir / 'report.md'}")
