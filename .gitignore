@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+venv/
+
+# Secrets
+.env
+
+# Audio artifacts — fixtures are the deliberate exception
+*.wav
+*.mp3
+*.flac
+!tests/fixtures/**/*.wav
+!tests/fixtures/**/*.mp3
+
+# Local output
+out/
+*_mastered.wav
+.DS_Store
