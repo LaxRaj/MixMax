@@ -13,6 +13,7 @@ dependencies = [
     "librosa>=0.10",
     "pedalboard>=0.9",
     "pyloudnorm>=0.1.1",
+    "matplotlib>=3.8",
 ]
 
 [project.optional-dependencies]

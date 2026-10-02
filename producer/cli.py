@@ -14,6 +14,7 @@ from producer.audio import human_size
 from producer.mastering import master_track
 from producer.mix import mix_vocal
 from producer.qa import run_qa
+from producer.report_plot import plot_comparison
 
 EXISTING_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
 OUT_FILE = click.Path(dir_okay=False, path_type=Path)
@@ -32,7 +33,8 @@ def cli() -> None:
 @click.option("--reference", required=True, type=EXISTING_FILE, help="Reference track to match.")
 @click.option("--out", "out_path", required=True, type=OUT_FILE, help="Destination WAV.")
 @click.option("--premix", is_flag=True, help="Run the vocal mix chain before mastering.")
-def master(vocal: Path, reference: Path, out_path: Path, premix: bool) -> None:
+@click.option("--plot", is_flag=True, help="Also write a before/after comparison PNG.")
+def master(vocal: Path, reference: Path, out_path: Path, premix: bool, plot: bool) -> None:
     """Master VOCAL against REFERENCE and write the result to OUT."""
     source = vocal
     with tempfile.TemporaryDirectory() as tmp:
@@ -44,6 +46,10 @@ def master(vocal: Path, reference: Path, out_path: Path, premix: bool) -> None:
 
     click.echo(f"Mastered -> {result} ({human_size(result.stat().st_size)})")
     echo_qa(run_qa(result))
+
+    if plot:
+        png = plot_comparison(vocal, result, result.with_suffix(".comparison.png"))
+        click.echo(f"Plot -> {png}")
 
 
 @cli.command()
