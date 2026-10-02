@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from pathlib import Path
 
 import click
@@ -10,6 +11,7 @@ import click
 from producer.analysis import analyze_vocal
 from producer.audio import human_size
 from producer.mastering import master_track
+from producer.mix import mix_vocal
 
 EXISTING_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
 OUT_FILE = click.Path(dir_okay=False, path_type=Path)
@@ -25,9 +27,17 @@ def cli() -> None:
 @click.option("--vocal", required=True, type=EXISTING_FILE, help="Raw vocal to master.")
 @click.option("--reference", required=True, type=EXISTING_FILE, help="Reference track to match.")
 @click.option("--out", "out_path", required=True, type=OUT_FILE, help="Destination WAV.")
-def master(vocal: Path, reference: Path, out_path: Path) -> None:
+@click.option("--premix", is_flag=True, help="Run the vocal mix chain before mastering.")
+def master(vocal: Path, reference: Path, out_path: Path, premix: bool) -> None:
     """Master VOCAL against REFERENCE and write the result to OUT."""
-    result = master_track(vocal, reference, out_path)
+    source = vocal
+    with tempfile.TemporaryDirectory() as tmp:
+        if premix:
+            source = Path(tmp) / f"{vocal.stem}_premixed.wav"
+            mix_vocal(vocal, source)
+            click.echo("Pre-mixed through the vocal chain.")
+        result = master_track(source, reference, out_path)
+
     click.echo(f"Mastered -> {result} ({human_size(result.stat().st_size)})")
 
 
@@ -42,3 +52,12 @@ def analyze(vocal: Path, out_path: Path | None) -> None:
     if out_path is not None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(payload + "\n")
+
+
+@cli.command()
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="Vocal to mix.")
+@click.option("--out", "out_path", required=True, type=OUT_FILE, help="Destination WAV.")
+def mix(vocal: Path, out_path: Path) -> None:
+    """Run VOCAL through the vocal mix chain and write it to OUT."""
+    result = mix_vocal(vocal, out_path)
+    click.echo(f"Mixed -> {result} ({human_size(result.stat().st_size)})")
