@@ -12,6 +12,8 @@ from producer.analysis import analyze_vocal
 from producer.batch import run_batch
 from producer.benchmark import build_benchmark_report, compare, discover_versions
 from producer.blindtest import build_blind_test, build_tally_report, tally
+from producer.intake import DEFAULT_SERVICES, run_intake
+from producer.workspace import render_workspace, song_dirs
 from producer.audio import human_size
 from producer.mastering import master_track
 from producer.mix import mix_vocal
@@ -181,3 +183,50 @@ def tally_cmd(key_path: Path, responses: Path, out_path: Path | None) -> None:
         click.echo(f"Results -> {out_path}")
     else:
         click.echo(report)
+
+
+@cli.command()
+@click.option("--input", "source", required=True,
+              type=click.Path(exists=True, path_type=Path),
+              help="A raw vocal, or a folder of them (searched recursively).")
+@click.option("--workspace", required=True, type=OUT_DIR,
+              help="Where the comparison workspace is scaffolded.")
+@click.option("--service", "services", multiple=True,
+              help=f"Service to compare against; repeatable. Default: {', '.join(DEFAULT_SERVICES)}.")
+def intake(source: Path, workspace: Path, services: tuple[str, ...]) -> None:
+    """Validate raw vocals and scaffold a comparison workspace."""
+    results = run_intake(source, workspace, services or DEFAULT_SERVICES)
+    if not results:
+        raise click.ClickException(f"No audio files found under {source}.")
+
+    colours = {"ready": "green", "caution": "yellow", "blocked": "red"}
+    for r in results:
+        click.secho(f"  {r['verdict']:8} {Path(r['source_file']).name}", fg=colours[r["verdict"]])
+        for issue in r["blockers"] + r["warnings"]:
+            click.echo(f"           {issue}")
+
+    usable = [r for r in results if r["verdict"] != "blocked"]
+    click.echo(f"{len(usable)}/{len(results)} usable -> {workspace}")
+    click.echo(f"Report   -> {workspace / 'INTAKE_REPORT.md'}")
+    click.echo(f"Next     -> {workspace / 'MANIFEST.md'} (upload checklist)")
+    if not usable:
+        raise click.ClickException("Nothing passed intake; see the blockers above.")
+
+
+@cli.command()
+@click.option("--workspace", required=True, type=IN_DIR, help="Workspace created by `intake`.")
+@click.option("--reference", required=True, type=EXISTING_FILE,
+              help="Reference track whose tone and loudness we match.")
+@click.option("--no-premix", is_flag=True, help="Master the raw vocal without the mix chain.")
+def render(workspace: Path, reference: Path, no_premix: bool) -> None:
+    """Render our own version of every track in the workspace."""
+    if not song_dirs(workspace):
+        raise click.ClickException(
+            f"No song folders in {workspace}. Run `producer intake` first."
+        )
+
+    for result in render_workspace(workspace, reference, premix=not no_premix):
+        verdict = "PASS" if result["qa"]["pass"] else "FAIL"
+        click.echo(f"  {verdict}  {result['slug']} -> {result['output']}")
+        for flag in result["qa"]["flags"]:
+            click.echo(f"          {flag}")

@@ -4,7 +4,7 @@
 
 - **Success metric:** `producer batch` runs against 3–5 real vocal files from friends and produces a `report.md` with automated QA results, plus your own subjective "does this sound release-ready" verdict per file.
 - **Deadline:** ~1 week out (assumption — 6 milestones, each ≤1 day; adjust if wrong).
-- **Status:** M0–M6 built, 51 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling to close that gap.
+- **Status:** M0–M7 built, 78 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: a reference track** — `producer render` cannot run without one.
 - **Repo:** `~/Desktop/projects/MixMax` — https://github.com/LaxRaj/MixMax
 
 ## Non-goals
@@ -225,6 +225,21 @@
   - [ ] At least 3 listeners returned scoresheets
 - **Verify:** `pytest -q && producer benchmark --versions-dir <dir> && producer blindtest --versions-dir <dir> --out-dir <dir>`
 
+### [x] M7 — Intake gate and comparison workspace
+
+- **Deliverable:** `producer intake` validates raw vocals and scaffolds a per-track comparison workspace; `producer render` fills in our own version.
+- **Why:** Friends send phone recordings. Discovering that a take was already clipped *after* paying for LANDR credits and booking an evening of listening is the expensive failure mode. This is the cheap gate in front of it.
+- **Acceptance criteria:**
+  - [x] Accepts `.m4a` (iPhone Voice Memos) by transcoding through `afconvert`
+  - [x] Clipped, silent and sub-2s takes are blocked and get no workspace folder
+  - [x] Every service receives a byte-identical `original.wav`
+  - [x] Noise floor reports "unmeasurable" on gapless takes rather than a false positive
+  - [x] `INTAKE_REPORT.md` and `MANIFEST.md` generated
+  - [x] `producer render` fills `producer.wav` for every scaffolded track
+  - [x] `pytest` passes
+  - [ ] Run against real friend-supplied vocals
+- **Verify:** `pytest -q && producer intake --input <raw> --workspace <ws> && producer render --workspace <ws> --reference <ref>`
+
 ## Decision log
 <!-- Append-only. Format: {date} — {decision} — {why} -->
 2026-10-02 — Built M0–M5 in one pass; each milestone verified with its own `Verify` command before commit. — The plan's milestones were already sequenced and independently checkable, so there was nothing to re-plan.
@@ -240,3 +255,8 @@
 2026-10-02 — The un-blinding key is written outside `--out-dir`. — If the key ships alongside the audio, one careless folder share destroys the blind.
 2026-10-02 — Band deltas below -45 dB relative to total are reported `n/a`. — Comparing two inaudible bands produced confident nonsense ("+49 dB in low_mid") from what was really clipping harmonics vs silence.
 2026-10-02 — True peak is measured at 4x oversampling, not sample peak. — Our own demo master read -0.0 dBFS by sample peak but +0.13 dBTP true peak, which distorts after lossy encoding.
+2026-10-02 — Added M7: an intake gate in front of the comparison. — Friends send phone audio; catching a clipped take before LANDR credits are spent is the whole point.
+2026-10-02 — `.m4a` is transcoded via macOS `afconvert` rather than adding an ffmpeg dependency. — libsndfile cannot read m4a, iPhone Voice Memos are m4a by default, and afconvert already ships on the target machine.
+2026-10-02 — Blocked files are deliberately not written to the workspace. — A folder with no `original.wav` cannot be accidentally uploaded or rendered, so the block is structural rather than advisory.
+2026-10-02 — Noise floor returns None on takes with no silent passages. — The 10th-percentile estimator was reading the quiet part of a continuously-sung note as room tone and flagging every clean file; a gate that cries wolf gets ignored.
+2026-10-02 — All services are fed one standardized 24-bit `original.wav`. — Comparing services that received different input files measures the input, not the service.

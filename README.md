@@ -44,6 +44,54 @@ You get `out.wav`, a QA verdict printed to the terminal, and
 
 ## Commands
 
+### `producer intake --input PATH --workspace DIR [--service NAME ...]`
+
+**Start here.** Point it at a raw vocal or a folder of them (searched
+recursively) and it validates every file, then scaffolds a comparison
+workspace.
+
+```bash
+producer intake --input ~/vocals/friends --workspace comparisons --service landr
+```
+
+Accepts WAV, MP3, FLAC, AIFF, OGG, CAF — and `.m4a`/`.mp4`/`.aac`, which
+libsndfile can't read, via macOS's built-in `afconvert`. iPhone Voice Memos
+are `.m4a`, so this matters.
+
+Each file is judged **ready**, **caution** or **blocked**:
+
+| Check | Why it matters |
+| --- | --- |
+| clipped regions | distortion is baked in; no master removes it — **blocks** |
+| silent / under 2s | nothing downstream can run — **blocks** |
+| peak level | very quiet takes need makeup gain that lifts the noise with it |
+| noise floor & SNR | compression brings room tone forward |
+| sample rate | below 44.1 kHz gets resampled up, which adds no detail back |
+| DC offset | wastes headroom |
+| leading/trailing silence | drags the loudness measurement down |
+| dual-mono | stereo file that's really mono |
+
+Noise floor is only reported when the take actually has gaps. On continuous
+singing the quietest frames are still *signal*, so the honest answer is
+"unmeasurable" rather than a fabricated warning.
+
+Files that pass are written to `<workspace>/<slug>/original.wav` as 24-bit WAV.
+**That single file is what every service receives** — feeding one service a
+different file invalidates the comparison. Blocked files get no folder at all.
+
+You also get `INTAKE_REPORT.md` (what's wrong with what) and `MANIFEST.md` (the
+upload checklist, since LANDR has no API to drive).
+
+### `producer render --workspace DIR --reference PATH [--no-premix]`
+
+Fills in `producer.wav` for every track in the workspace by running our own
+pipeline — mix chain, then reference-based mastering — and prints the QA
+verdict per track. Re-run it after any change to the chain.
+
+```bash
+producer render --workspace comparisons --reference my_reference.wav
+```
+
 ### `producer analyze --vocal PATH [--out PATH]`
 
 Tempo, voiced pitch range and dynamic range, as JSON. Every value is guaranteed
@@ -119,9 +167,9 @@ service in one folder, named by service:
 
 ```
 comparisons/my_song/
-  producer.wav
-  landr.wav
-  original.wav
+  original.wav     <- written by `intake`, the shared input
+  producer.wav     <- written by `render`
+  landr.wav        <- you download and drop in
 ```
 
 ```bash
@@ -177,6 +225,23 @@ pytest -q
 The suite runs entirely on synthetic fixtures generated at test-setup time — no
 real audio required. The fixtures are also committed so the quickstart above
 works from a clean clone.
+
+## The testing loop
+
+```bash
+producer intake    --input ~/vocals/friends --workspace comparisons
+#   read comparisons/INTAKE_REPORT.md; re-record anything blocked
+#   upload each original.wav to LANDR, save the result as landr.wav
+producer render    --workspace comparisons --reference my_reference.wav
+producer benchmark --versions-dir comparisons/<slug> --out comparisons/<slug>/benchmark.md
+producer blindtest --versions-dir comparisons/<slug> --out-dir blind/<slug> --seed 42
+#   send blind/<slug> to friends, collect the filled scoresheets
+producer tally     --key blind/<slug>.key.json --responses responses/ --out results.md
+```
+
+`original.wav` stays in the folder deliberately — it rides through the blind
+test as a control. If listeners rank the unmastered take first, the problem is
+the chain, not the recording.
 
 ## Scope
 
