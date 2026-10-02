@@ -60,3 +60,33 @@ def click_track(bpm: float, seconds: float, sr: int = SR) -> np.ndarray:
 def click_120_wav(ensure_fixtures: None) -> Path:
     """A 120 BPM click track — committed, used to pin tempo detection."""
     return write_if_missing(FIXTURES / "click_120bpm.wav", click_track(120.0, 8.0))
+
+
+@pytest.fixture(scope="session")
+def clipped_wav(ensure_fixtures: None) -> Path:
+    """A fixture that deliberately clips, to prove the QA gate catches it."""
+    samples = sine(440.0, 2.0, 1.0)
+    samples[::100] = 1.0  # unambiguous full-scale hits
+    return write_if_missing(FIXTURES / "clipped.wav", samples)
+
+
+@pytest.fixture(scope="session")
+def clean_wav(ensure_fixtures: None) -> Path:
+    """A fixture normalized into the QA loudness window, so it should pass."""
+    import pyloudnorm as pyln
+
+    path = FIXTURES / "clean_-12lufs.wav"
+    if path.exists():
+        return path
+    samples = sine(440.0, 3.0, 0.3)
+    meter = pyln.Meter(SR)
+    normalized = pyln.normalize.loudness(samples, meter.integrated_loudness(samples), -12.0)
+    return write_if_missing(path, normalized.astype(np.float32))
+
+
+@pytest.fixture(scope="session")
+def out_of_phase_wav(ensure_fixtures: None) -> Path:
+    """Stereo with L and R inverted — cancels completely when folded to mono."""
+    left = sine(440.0, 2.0, 0.3)
+    stereo = np.stack([left, -left], axis=1)
+    return write_if_missing(FIXTURES / "out_of_phase.wav", stereo)

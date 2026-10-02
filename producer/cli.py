@@ -12,6 +12,7 @@ from producer.analysis import analyze_vocal
 from producer.audio import human_size
 from producer.mastering import master_track
 from producer.mix import mix_vocal
+from producer.qa import run_qa
 
 EXISTING_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
 OUT_FILE = click.Path(dir_okay=False, path_type=Path)
@@ -39,6 +40,7 @@ def master(vocal: Path, reference: Path, out_path: Path, premix: bool) -> None:
         result = master_track(source, reference, out_path)
 
     click.echo(f"Mastered -> {result} ({human_size(result.stat().st_size)})")
+    echo_qa(run_qa(result))
 
 
 @cli.command()
@@ -61,3 +63,18 @@ def mix(vocal: Path, out_path: Path) -> None:
     """Run VOCAL through the vocal mix chain and write it to OUT."""
     result = mix_vocal(vocal, out_path)
     click.echo(f"Mixed -> {result} ({human_size(result.stat().st_size)})")
+
+
+def echo_qa(report: dict) -> None:
+    """Print a QA report as a verdict line plus one line per failed check."""
+    verdict = "PASS" if report["pass"] else "FAIL"
+    click.echo(f"QA {verdict} — {report['lufs']} LUFS")
+    for flag in report["flags"]:
+        click.echo(f"  - {flag}")
+
+
+@cli.command()
+@click.option("--file", "file_path", required=True, type=EXISTING_FILE, help="Audio to check.")
+def qa(file_path: Path) -> None:
+    """Run the automated QA gate against FILE and print the report as JSON."""
+    click.echo(json.dumps(run_qa(file_path), indent=2))
