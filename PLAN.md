@@ -4,7 +4,7 @@
 
 - **Success metric:** `producer batch` runs against 3–5 real vocal files from friends and produces a `report.md` with automated QA results, plus your own subjective "does this sound release-ready" verdict per file.
 - **Deadline:** ~1 week out (assumption — 6 milestones, each ≤1 day; adjust if wrong).
-- **Status:** Milestone 0 — not started.
+- **Status:** M0–M5 built, all 26 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures.
 - **Repo:** `~/Desktop/projects/MixMax` — https://github.com/LaxRaj/MixMax
 
 ## Non-goals
@@ -27,7 +27,7 @@
 
 ## Milestones
 
-### [ ] M0 — Walking skeleton
+### [x] M0 — Walking skeleton
 - **Deliverable:** Repo scaffolded; `producer master --vocal PATH --reference PATH --out PATH` runs end-to-end on a real file using `matchering`.
 - **Prompt:**
   ```
@@ -57,11 +57,11 @@
   ```
 - **Acceptance criteria:**
   - [ ] `producer master` runs on a real friend-supplied vocal + a real reference track and produces a playable WAV
-  - [ ] `pytest` passes using only synthetic fixtures (no real audio required for CI)
-  - [ ] `.env`/`.gitignore` in place, no secrets committed
+  - [x] `pytest` passes using only synthetic fixtures (no real audio required for CI)
+  - [x] `.env`/`.gitignore` in place, no secrets committed
 - **Verify:** `pytest -q && python -m producer master --vocal tests/fixtures/target.wav --reference tests/fixtures/reference.wav --out /tmp/out.wav && test -s /tmp/out.wav`
 
-### [ ] M1 — Vocal analysis
+### [x] M1 — Vocal analysis
 - **Deliverable:** `producer analyze --vocal PATH` returns tempo, pitch range, dynamic range as JSON.
 - **Prompt:**
   ```
@@ -86,11 +86,11 @@
   ```
 - **Acceptance criteria:**
   - [ ] `producer analyze` on a real vocal returns valid JSON with all four fields populated
-  - [ ] `pytest` passes, tempo detection within ±5 BPM on the synthetic click track
-  - [ ] No NaN/inf in output on either fixture
+  - [x] `pytest` passes, tempo detection within ±5 BPM on the synthetic click track
+  - [x] No NaN/inf in output on either fixture
 - **Verify:** `pytest -q && python -m producer analyze --vocal tests/fixtures/target.wav | python -m json.tool`
 
-### [ ] M2 — Vocal mix chain
+### [x] M2 — Vocal mix chain
 - **Deliverable:** `producer mix --vocal PATH --out PATH` applies a real vocal-processing chain; `producer master --premix` feeds mixed output into mastering instead of the raw vocal.
 - **Prompt:**
   ```
@@ -119,11 +119,11 @@
   ```
 - **Acceptance criteria:**
   - [ ] `producer mix` on a real vocal produces an audibly processed file
-  - [ ] `producer master --premix` runs the full chain end-to-end
-  - [ ] `pytest` passes, output non-silent and correct duration
+  - [x] `producer master --premix` runs the full chain end-to-end
+  - [x] `pytest` passes, output non-silent and correct duration
 - **Verify:** `pytest -q && python -m producer mix --vocal tests/fixtures/target.wav --out /tmp/mixed.wav && test -s /tmp/mixed.wav`
 
-### [ ] M3 — QA gate
+### [x] M3 — QA gate
 - **Deliverable:** `producer qa --file PATH` returns pass/fail + specific flags; wired automatically into `producer master`.
 - **Prompt:**
   ```
@@ -151,11 +151,11 @@
   ```
 - **Acceptance criteria:**
   - [ ] `producer qa` on a real mastered file returns accurate pass/fail with specific flags
-  - [ ] `producer master` auto-prints QA results after mastering
-  - [ ] `pytest` passes: clipped fixture fails QA, clean fixture passes
+  - [x] `producer master` auto-prints QA results after mastering
+  - [x] `pytest` passes: clipped fixture fails QA, clean fixture passes
 - **Verify:** `pytest -q && python -m producer qa --file /tmp/out.wav`
 
-### [ ] M4 — Batch friend-test harness
+### [x] M4 — Batch friend-test harness
 - **Deliverable:** `producer batch --input-dir DIR --reference PATH --out-dir DIR` runs the full pipeline across every file in a folder and writes a `report.md`.
 - **Prompt:**
   ```
@@ -179,11 +179,11 @@
   ```
 - **Acceptance criteria:**
   - [ ] Running batch against a real folder of 3–5 friends' vocal files produces mastered outputs + a readable `report.md`
-  - [ ] Automated QA pass rate is visible at a glance
-  - [ ] `pytest` passes
+  - [x] Automated QA pass rate is visible at a glance
+  - [x] `pytest` passes
 - **Verify:** `pytest -q && python -m producer batch --input-dir tests/fixtures/batch --reference tests/fixtures/reference.wav --out-dir /tmp/batch_out && test -f /tmp/batch_out/report.md`
 
-### [ ] M5 — Ship (internal — not a public launch)
+### [x] M5 — Ship (internal — not a public launch)
 - **Deliverable:** README with a clean-clone quickstart, a before/after comparison image as visual proof, license. No UI, no distribution post — this is a working tool for you and your friends to run.
 - **Prompt:**
   ```
@@ -206,10 +206,17 @@
   working tool ready to run against the friends' vocal files you already have.
   ```
 - **Acceptance criteria:**
-  - [ ] Quickstart works from a clean clone with no undocumented steps
-  - [ ] README embeds a real before/after comparison image
+  - [x] Quickstart works from a clean clone with no undocumented steps
+  - [x] README embeds a real before/after comparison image
   - [ ] `producer batch` has been run at least once against real friend-supplied vocals — `report.md` is the artifact that answers "how good are we"
 - **Verify:** `rm -rf /tmp/clean_clone && git clone . /tmp/clean_clone && cd /tmp/clean_clone && pip install -e . && producer master --vocal tests/fixtures/target.wav --reference tests/fixtures/reference.wav --out /tmp/clean_clone/out.wav --plot`
 
 ## Decision log
 <!-- Append-only. Format: {date} — {decision} — {why} -->
+2026-10-02 — Built M0–M5 in one pass; each milestone verified with its own `Verify` command before commit. — The plan's milestones were already sequenced and independently checkable, so there was nothing to re-plan.
+2026-10-02 — Used `HighpassFilter(cutoff_frequency_hz=...)` instead of the plan's `cutoff_hz`. — The plan's prompt had the wrong keyword; `cutoff_hz` raises TypeError on pedalboard 0.9.25.
+2026-10-02 — Set `Reverb(dry_level=0.92)` rather than leaving the 0.4 default. — The default drops the dry signal ~8 dB, so the "subtle space" stage was silently acting as a large volume cut.
+2026-10-02 — Kept the plan's 2-second fixtures after checking matchering empirically. — Current matchering exposes no `min_length`, only `max_length=900`; 2s files process fine, so no need to inflate committed fixture size.
+2026-10-02 — Committed the generated fixtures instead of generating them only at test time. — M5 requires the README quickstart to work from a clean clone, which needs the WAVs present before pytest has ever run.
+2026-10-02 — `report.md` carries an empty subjective-verdict table per file. — The plan's success metric is automated QA *plus* a human "release-ready" call; the report is where that belongs.
+2026-10-02 — Deferred all real-vocal acceptance criteria. — No friend-supplied audio available in this environment; synthetic fixtures cannot answer "does this sound release-ready".
