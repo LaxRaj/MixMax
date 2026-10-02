@@ -435,13 +435,30 @@ def build_manifest(results: list[IntakeResult], services: tuple[str, ...]) -> st
         lines += [f"## {r.slug}", "", f"Upload: `{folder}/original.wav`", ""]
         for service in services:
             lines.append(f"- [ ] **{service}** → save as `{folder}/{service}.wav`")
-        lines += [f"- [ ] **producer** → `producer render` writes `{folder}/producer.wav`", ""]
+        lines += [
+            f"- [ ] **producer** → `producer render` writes `{folder}/producer.wav`",
+            f"- [ ] _(optional)_ **reference** → drop one at `{folder}/reference.wav` "
+            "to give this track its own tonal target",
+            "",
+        ]
 
     lines += [
+        "## References",
+        "",
+        "`producer render` matches each track to a reference track — a commercially",
+        "released song whose tone and loudness you want to land near. Either:",
+        "",
+        "- drop a `reference.wav` (or `.mp3`, or a symlink) inside a track's folder",
+        "  to give that track its own, or",
+        "- pass `--reference` as the fallback for every track without one.",
+        "",
+        "`reference.*` is a reserved name: it is the tonal target, not a version of",
+        "the song, so `producer benchmark` and `producer blindtest` both ignore it.",
+        "",
         "## Then",
         "",
         "```bash",
-        "producer render    --workspace <workspace> --reference <reference.wav>",
+        "producer render    --workspace <workspace> --reference <fallback.wav>",
         "producer benchmark --versions-dir <workspace>/<slug> --out <workspace>/<slug>/benchmark.md",
         "producer blindtest --versions-dir <workspace>/<slug> --out-dir <workspace>/<slug>/blind",
         "```",

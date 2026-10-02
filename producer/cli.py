@@ -13,7 +13,13 @@ from producer.batch import run_batch
 from producer.benchmark import build_benchmark_report, compare, discover_versions
 from producer.blindtest import build_blind_test, build_tally_report, tally
 from producer.intake import DEFAULT_SERVICES, run_intake
-from producer.workspace import render_workspace, song_dirs
+from producer.workspace import (
+    REFERENCE_STEM,
+    MissingReference,
+    plan_references,
+    render_workspace,
+    song_dirs,
+)
 from producer.audio import human_size
 from producer.mastering import master_track
 from producer.mix import mix_vocal
@@ -215,18 +221,45 @@ def intake(source: Path, workspace: Path, services: tuple[str, ...]) -> None:
 
 @cli.command()
 @click.option("--workspace", required=True, type=IN_DIR, help="Workspace created by `intake`.")
-@click.option("--reference", required=True, type=EXISTING_FILE,
-              help="Reference track whose tone and loudness we match.")
+@click.option("--reference", type=EXISTING_FILE,
+              help=f"Fallback reference for tracks with no {REFERENCE_STEM}.* of their own.")
 @click.option("--no-premix", is_flag=True, help="Master the raw vocal without the mix chain.")
-def render(workspace: Path, reference: Path, no_premix: bool) -> None:
-    """Render our own version of every track in the workspace."""
+@click.option("--dry-run", is_flag=True, help="Show which reference each track would use, then stop.")
+def render(workspace: Path, reference: Path | None, no_premix: bool, dry_run: bool) -> None:
+    """Render our own version of every track, each against its own reference.
+
+    Drop a `reference.wav` (or .mp3, or a symlink) beside a track to give it
+    its own tonal target; --reference covers everything else.
+    """
     if not song_dirs(workspace):
         raise click.ClickException(
             f"No song folders in {workspace}. Run `producer intake` first."
         )
 
-    for result in render_workspace(workspace, reference, premix=not no_premix):
+    resolved, missing = plan_references(workspace, reference)
+    if missing:
+        raise click.ClickException(
+            "No reference for: {names}.\n"
+            "Drop a {stem}.wav in each of those folders, or pass --reference "
+            "as a fallback.".format(
+                names=", ".join(d.name for d in missing), stem=REFERENCE_STEM
+            )
+        )
+
+    if dry_run:
+        for song_dir, ref in resolved:
+            origin = "per-track" if ref.parent == song_dir else "fallback"
+            click.echo(f"  {song_dir.name:24} {origin:9} {ref}")
+        return
+
+    try:
+        results = render_workspace(workspace, reference, premix=not no_premix)
+    except MissingReference as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    for result in results:
         verdict = "PASS" if result["qa"]["pass"] else "FAIL"
         click.echo(f"  {verdict}  {result['slug']} -> {result['output']}")
+        click.echo(f"          reference: {Path(result['reference']).name} ({result['reference_source']})")
         for flag in result["qa"]["flags"]:
             click.echo(f"          {flag}")

@@ -4,7 +4,7 @@
 
 - **Success metric:** `producer batch` runs against 3–5 real vocal files from friends and produces a `report.md` with automated QA results, plus your own subjective "does this sound release-ready" verdict per file.
 - **Deadline:** ~1 week out (assumption — 6 milestones, each ≤1 day; adjust if wrong).
-- **Status:** M0–M7 built, 78 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: a reference track** — `producer render` cannot run without one.
+- **Status:** M0–M7 built, 93 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: reference tracks** — `producer render` needs one per track, or a fallback.
 - **Repo:** `~/Desktop/projects/MixMax` — https://github.com/LaxRaj/MixMax
 
 ## Non-goals
@@ -236,6 +236,7 @@
   - [x] Noise floor reports "unmeasurable" on gapless takes rather than a false positive
   - [x] `INTAKE_REPORT.md` and `MANIFEST.md` generated
   - [x] `producer render` fills `producer.wav` for every scaffolded track
+  - [x] References resolve per track, with a workspace-wide fallback
   - [x] `pytest` passes
   - [ ] Run against real friend-supplied vocals
 - **Verify:** `pytest -q && producer intake --input <raw> --workspace <ws> && producer render --workspace <ws> --reference <ref>`
@@ -260,3 +261,6 @@
 2026-10-02 — Blocked files are deliberately not written to the workspace. — A folder with no `original.wav` cannot be accidentally uploaded or rendered, so the block is structural rather than advisory.
 2026-10-02 — Noise floor returns None on takes with no silent passages. — The 10th-percentile estimator was reading the quiet part of a continuously-sung note as room tone and flagging every clean file; a gate that cries wolf gets ignored.
 2026-10-02 — All services are fed one standardized 24-bit `original.wav`. — Comparing services that received different input files measures the input, not the service.
+2026-10-02 — References resolve per track (`<slug>/reference.*`) with `--reference` as fallback. — Vocals span genres; one tonal target for a ballad and a rap hook masters at least one of them wrong.
+2026-10-02 — `reference` is a reserved stem, excluded from version discovery. — It lives in the song folder but is a different song; left discoverable it would be benchmarked as a master and, worse, land in the blind test for friends to score.
+2026-10-02 — `render` resolves every reference before rendering any track. — A mid-run failure leaves a workspace where some `producer.wav` files are current and others are stale, which silently corrupts the next benchmark.

@@ -189,17 +189,27 @@ def measure(path: str | Path, source: str | None = None) -> dict:
     return measurement.to_dict()
 
 
+# A per-track reference lives in the song folder but is a *different song* --
+# the tonal target, not a rendering of this one. Comparing against it would be
+# meaningless, so the stem is reserved.
+RESERVED_STEMS = frozenset({"reference"})
+
+
 def discover_versions(directory: str | Path) -> dict[str, Path]:
     """Every audio file in `directory`, keyed by filename stem as the source name.
 
     The convention is one folder per song, one file per service:
         comparisons/my_song/{producer,landr,original}.wav
+
+    `reference.*` is excluded -- see RESERVED_STEMS.
     """
     directory = Path(directory)
     return {
         p.stem: p
         for p in sorted(directory.iterdir())
-        if p.is_file() and p.suffix.lower() in AUDIO_SUFFIXES
+        if p.is_file()
+        and p.suffix.lower() in AUDIO_SUFFIXES
+        and p.stem.lower() not in RESERVED_STEMS
     }
 
 

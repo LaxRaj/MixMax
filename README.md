@@ -82,15 +82,45 @@ different file invalidates the comparison. Blocked files get no folder at all.
 You also get `INTAKE_REPORT.md` (what's wrong with what) and `MANIFEST.md` (the
 upload checklist, since LANDR has no API to drive).
 
-### `producer render --workspace DIR --reference PATH [--no-premix]`
+### `producer render --workspace DIR [--reference PATH] [--no-premix] [--dry-run]`
 
 Fills in `producer.wav` for every track in the workspace by running our own
 pipeline — mix chain, then reference-based mastering — and prints the QA
 verdict per track. Re-run it after any change to the chain.
 
+**References are per track.** Mastering matches a reference's tone and
+loudness, so tracks in different genres need different targets. Either:
+
+- drop a `reference.wav` (or `.mp3`, or a **symlink**) inside a track's folder
+  to give that track its own, or
+- pass `--reference` as the fallback for every track without one.
+
 ```bash
-producer render --workspace comparisons --reference my_reference.wav
+# per-track where it matters, one fallback for the rest
+cp soul_ref.wav       comparisons/ballad/reference.wav
+ln -s ~/refs/trap.wav comparisons/rap-hook/reference.wav
+producer render --workspace comparisons --reference pop_ref.wav
 ```
+
+```
+  PASS  ballad -> comparisons/ballad/producer.wav
+          reference: reference.wav (per-track)
+  PASS  rap-hook -> comparisons/rap-hook/producer.wav
+          reference: trap.wav (per-track)
+  FAIL  indie-bridge -> comparisons/indie-bridge/producer.wav
+          reference: pop_ref.wav (fallback)
+          loudness: -7.9 LUFS is louder than -9
+```
+
+`--dry-run` prints which reference each track *would* use and stops, which is
+worth doing before a long render.
+
+`reference.*` is a **reserved name**: it's the tonal target, not a version of
+the song, so `benchmark` and `blindtest` both ignore it. Without that, friends
+would end up blind-scoring a completely different song.
+
+If any track has neither its own reference nor a fallback, the whole run
+refuses up front rather than rendering half the workspace.
 
 ### `producer analyze --vocal PATH [--out PATH]`
 
