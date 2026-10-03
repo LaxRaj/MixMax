@@ -34,6 +34,7 @@ from producer.audio import human_size
 from producer.mastering import master_track
 from producer.mix import ChainParams, DEFAULT_PARAMS, mix_vocal
 from producer.qa import DEFAULT_PROFILE, QAProfile, run_qa
+from producer.shootout import DEFAULT_TARGETS, build_shootout, build_shootout_report
 from producer.standards import (
     evaluate_all,
     load_standards,
@@ -641,3 +642,81 @@ def dashboard(
             fg="yellow",
         )
     click.echo(f"Dashboard -> {out_path}")
+
+
+@cli.command()
+@click.option("--source", required=True, type=EXISTING_FILE,
+              help="The track to render — a full mix with its beat, or a bare vocal.")
+@click.option("--reference", required=True, type=EXISTING_FILE, help="Reference to master against.")
+@click.option("--out-dir", required=True, type=OUT_DIR, help="Where the versions are written.")
+@click.option("--target", "targets", multiple=True,
+              help=f"Standard to render for; repeatable. Default: {', '.join(DEFAULT_TARGETS)}.")
+@click.option("--kind", type=click.Choice(["full-mix", "vocal-only"]),
+              help="Override the automatic detection that decides whether the vocal chain runs.")
+@click.option("--competitor", "competitors", multiple=True, type=EXISTING_FILE,
+              help="A commercial master of the same track; repeatable.")
+@click.option("--params", "params_path", type=EXISTING_FILE, help="Fitted chain settings.")
+@click.option("--no-original", is_flag=True, help="Leave the unprocessed source out.")
+def shootout(
+    source: Path, reference: Path, out_dir: Path, targets: tuple[str, ...],
+    kind: str | None, competitors: tuple[Path, ...], params_path: Path | None,
+    no_original: bool,
+) -> None:
+    """Render one track at several published targets, ready for a blind test.
+
+    Loudness normalisation hides how hard a master was limited. Rendering the
+    same source at each target and then gain-matching for listening is what
+    makes that audible.
+    """
+    chain = ChainParams.load(params_path) if params_path else DEFAULT_PARAMS
+    try:
+        result = build_shootout(
+            source=source, reference=reference, out_dir=out_dir,
+            targets=targets or DEFAULT_TARGETS, kind=kind, params=chain,
+            competitors={p.stem: p for p in competitors},
+            include_original=not no_original,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"Detected {result['kind']}; vocal chain "
+               + ("applied." if result["vocal_chain_applied"]
+                  else "skipped — it would thin a full track's low end."))
+    click.echo(f"\n{'version':<18} {'target':>7} {'LUFS':>7} {'peak':>8} {'crest':>7}")
+    for v in result["versions"]:
+        target = f"{v['target_lufs']:.0f}" if v["target_lufs"] is not None else "—"
+        click.echo(
+            f"{v['name']:<18} {target:>7} {v['lufs']:>7.1f} "
+            f"{v['true_peak_dbtp']:>+8.2f} {v['crest_factor_db']:>7.1f}"
+        )
+
+    missed = [v for v in result["versions"] if v["loudness"] and not v["loudness"]["on_target"]]
+    for v in missed:
+        click.secho(f"  {v['name']} landed at {v['loudness']['achieved_lufs']:.1f} LUFS, "
+                    f"not {v['target_lufs']:.0f} — limiting pulled it back.", fg="yellow")
+
+    if not result["differs_in_processing"]:
+        click.secho(
+            "\nNo version needed limiting, so these are the same master at different "
+            "levels. A blind test gain-matches them back together and would be asking "
+            "listeners to tell identical files apart — add --target loud:-8.",
+            fg="red",
+        )
+    elif result["limited_versions"]:
+        click.echo(f"\nLimiting engaged for: {', '.join(result['limited_versions'])}. "
+                   "The rest reached their target on gain alone.")
+
+    duplicates = result.get("identical_after_matching") or []
+    if duplicates:
+        click.secho(
+            f"{', '.join(duplicates)} needed no limiting, so they are the same audio at "
+            "different levels and the blind test will make them identical. Keep one.",
+            fg="yellow",
+        )
+
+    report = out_dir / "shootout.md"
+    report.write_text(build_shootout_report(result))
+    (out_dir / "shootout.json").write_text(json.dumps(result, indent=2) + "\n")
+
+    click.echo(f"\nReport -> {report}")
+    click.echo(f"Next:  producer blindtest --versions-dir {out_dir} --out-dir blind/<slug>")

@@ -51,6 +51,11 @@ export async function positionText(page: Page): Promise<string> {
   return (text ?? "").split("loops")[0].trim();
 }
 
+/** Labels the current manifest declares, so tests do not hard-code a count. */
+export async function manifestLabels(page: Page): Promise<string[]> {
+  return page.evaluate(() => fetch("/test.json").then((r) => r.json()).then((m) => m.labels));
+}
+
 export async function loadAudio(page: Page): Promise<void> {
   await page.getByRole("button", { name: /load the audio/i }).click();
   await page.getByRole("radio", { name: "Version A" }).waitFor({ state: "visible", timeout: 45_000 });

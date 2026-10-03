@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { graphState, loadAudio, positionText, SOURCE_NAMES, tagSources } from "./helpers";
+import {
+  graphState,
+  loadAudio,
+  manifestLabels,
+  positionText,
+  SOURCE_NAMES,
+  tagSources,
+} from "./helpers";
 
 test.describe("blind listening test", () => {
   test.beforeEach(async ({ page }) => {
@@ -20,12 +27,13 @@ test.describe("blind listening test", () => {
     await page.getByRole("button", { name: "Play" }).click();
     await page.waitForTimeout(800);
 
+    const labels = await manifestLabels(page);
     const state = await graphState(page);
-    expect(state.concurrentSources).toBe(3);
+    expect(state.concurrentSources).toBe(labels.length);
     expect(state.ctxState).toBe("running");
     // Exactly one version audible, the rest fully muted.
     expect(Object.values(state.gains).filter((g) => g === 1)).toHaveLength(1);
-    expect(Object.values(state.gains).filter((g) => g === 0)).toHaveLength(2);
+    expect(Object.values(state.gains).filter((g) => g === 0)).toHaveLength(labels.length - 1);
   });
 
   test("switching is gapless: no restart, no lost position", async ({ page }) => {
@@ -86,7 +94,7 @@ test.describe("blind listening test", () => {
     await page.getByLabel(/your name/i).fill("Ana Test");
     await expect(submit).toBeDisabled(); // scores still missing
 
-    for (const label of ["A", "B", "C"]) {
+    for (const label of await manifestLabels(page)) {
       await page.getByRole("radiogroup", { name: `Score for ${label}` })
         .getByRole("radio", { name: "4" })
         .click();
@@ -96,7 +104,8 @@ test.describe("blind listening test", () => {
 
   test("the exported CSV matches the schema producer tally reads", async ({ page }) => {
     await page.getByLabel(/your name/i).fill("Ana Test");
-    const scores: Record<string, string> = { A: "2", B: "4", C: "5" };
+    const labels = await manifestLabels(page);
+    const scores = Object.fromEntries(labels.map((l, i) => [l, String((i % 5) + 1)]));
     for (const [label, score] of Object.entries(scores)) {
       await page.getByRole("radiogroup", { name: `Score for ${label}` })
         .getByRole("radio", { name: score })
@@ -119,19 +128,21 @@ test.describe("blind listening test", () => {
 
     const lines = csv.trim().split("\n");
     expect(lines[0]).toBe("listener,label,release_ready_1_5,rank,notes");
-    expect(lines).toHaveLength(4);
-    expect(lines[1]).toContain("Ana Test,A,2,1");
+    expect(lines).toHaveLength(labels.length + 1);
+    expect(lines[1]).toContain("Ana Test,A,1,1");
     expect(lines[1]).toContain('"harsh, squashed"');
     // Ranks must be a permutation — producer tally counts first-place votes.
-    const ranks = lines.slice(1).map((l) => l.split(",")[3]).sort();
-    expect(ranks).toEqual(["1", "2", "3"]);
+    const ranks = lines.slice(1).map((l) => Number(l.split(",")[3])).sort((a, b) => a - b);
+    expect(ranks).toEqual(labels.map((_, i) => i + 1));
   });
 
   test("reordering the ranking changes the exported ranks", async ({ page }) => {
     await page.getByRole("button", { name: /move c up/i }).click();
     await page.getByRole("button", { name: /move c up/i }).click();
 
+    const labels = await manifestLabels(page);
     const order = await page.locator('[class*="rankLabel"]').allTextContents();
-    expect(order).toEqual(["C", "A", "B"]);
+    expect(order.slice(0, 3)).toEqual(["C", "A", "B"]);
+    expect(order).toHaveLength(labels.length);
   });
 });

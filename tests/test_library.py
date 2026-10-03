@@ -13,6 +13,7 @@ from click.testing import CliRunner
 from producer.cli import cli
 from producer.library import (
     FULL_MIX,
+    SUB_FULL_MIX_DB,
     MIN_CORPUS_FOR_THRESHOLDS,
     VOCAL_ONLY,
     Library,
@@ -77,8 +78,13 @@ def test_key_estimation_returns_a_real_key() -> None:
 
 
 def test_full_mix_and_vocal_only_are_distinguished() -> None:
-    assert classify_kind({"sub": -30.0, "low": -4.0}) == FULL_MIX
+    assert classify_kind({"sub": -5.0, "low": -3.0}) == FULL_MIX
     assert classify_kind({"sub": -70.0, "low": -40.0}) == VOCAL_ONLY
+
+
+def test_a_vocal_fundamental_is_not_mistaken_for_a_full_mix() -> None:
+    """A singer's fundamental lives in `low`; judging on it misread every vocal."""
+    assert classify_kind({"sub": -117.0, "low": -0.4}) == VOCAL_ONLY
 
 
 def test_library_roundtrip_and_idempotent_add(tmp_path: Path, corpus: Path) -> None:

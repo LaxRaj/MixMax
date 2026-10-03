@@ -4,7 +4,7 @@
 
 - **Success metric:** `producer batch` runs against 3–5 real vocal files from friends and produces a `report.md` with automated QA results, plus your own subjective "does this sound release-ready" verdict per file.
 - **Deadline:** ~1 week out (assumption — 6 milestones, each ≤1 day; adjust if wrong).
-- **Status:** M0–M7 built plus chain fitting, a reference library and standards conformance, 140 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: reference tracks** — `producer render` needs one per track, or a fallback.
+- **Status:** M0–M7 built plus chain fitting, a reference library, standards conformance and the loudness shootout, 179 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: reference tracks** — `producer render` needs one per track, or a fallback.
 - **Repo:** `~/Desktop/projects/MixMax` — https://github.com/LaxRaj/MixMax
 
 ## Non-goals
@@ -276,3 +276,8 @@
 2026-10-03 — Standards are data with `source` and `as_of`, replaceable from JSON. — Platform targets drift and my figures have a knowledge cutoff; the mechanism stays correct when a number goes stale, and the provenance travels with every profile.
 2026-10-03 — Platform behaviour is modelled, not just the target number. — YouTube only attenuates (a quiet master stays quiet), Spotify also raises (which can push true peak over the ceiling), and Amazon's peak limit is stricter; the number alone would miss all three.
 2026-10-03 — Conformance consequences are summarised once per master, not once per platform. — The first version printed the same sentence eight times, which buried the finding it was making.
+2026-10-03 — `classify_kind` now judges on sub-bass alone, not sub-or-low. — A singer's fundamental sits in the 60-250 Hz `low` band, so the old test marked every bare vocal as a full mix; measured fixtures separate cleanly on `sub` (-117 dB vocal vs -4 dB full track). This also affected intake and the library.
+2026-10-03 — Loudness targeting pushes gain into a fixed limiter and bisects, rather than correcting gain arithmetically. — pedalboard's Limiter saturates toward 0 dBFS under heavy drive instead of holding its threshold, so loudness rises sub-linearly with gain and an arithmetic correction diverged.
+2026-10-03 — Plain gain is tried before limiting, and limiting only engages when a target is otherwise unreachable. — Limiting trades away exactly the dynamics the listening test is meant to judge; a quieter target needs none.
+2026-10-03 — The shootout refuses to present a comparison where no version needed limiting. — Those versions are one master at different levels, and the blind test's gain-matching makes them the same file; the test would ask listeners to distinguish identical audio.
+2026-10-03 — A deliberately crushed `loud:-8` target ships in the defaults. — Without one, every published target is quieter than our own master, nothing gets limited, and the experiment has nothing to measure.

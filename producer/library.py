@@ -29,12 +29,16 @@ PITCH_CLASSES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
 MAJOR_PROFILE = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88])
 MINOR_PROFILE = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
 
-# A full mix carries real weight below ~250 Hz; a bare vocal does not. This
-# matters because mastering a lone vocal toward a full-mix reference asks
+# Only a kick and bass put real energy below 60 Hz. The `low` band (60-250 Hz)
+# is where a *vocal's own fundamental* lives -- 85-255 Hz covers most singers --
+# so judging on it marks every bare vocal as a full mix. Measured on fixtures:
+# a bare vocal sits near -117 dB in `sub`, a full track near -4 dB.
+#
+# This matters because mastering a lone vocal toward a full-mix reference asks
 # matchering to invent bass that was never recorded.
 FULL_MIX = "full-mix"
 VOCAL_ONLY = "vocal-only"
-LOW_END_FULL_MIX_DB = -12.0
+SUB_FULL_MIX_DB = -30.0
 
 # Only analyse this much of each track. Enough to characterise it, and it keeps
 # ingesting a few hundred songs to minutes rather than an afternoon.
@@ -83,9 +87,9 @@ def estimate_key(y: np.ndarray, sr: int) -> str:
 
 
 def classify_kind(band_balance: dict[str, float]) -> str:
-    """Guess whether a track is a full mix or a bare vocal, from its low end."""
-    low_end = max(band_balance.get("sub", -120.0), band_balance.get("low", -120.0))
-    return FULL_MIX if low_end >= LOW_END_FULL_MIX_DB else VOCAL_ONLY
+    """Guess whether a track is a full mix or a bare vocal, from its sub energy."""
+    sub = band_balance.get("sub", -120.0)
+    return FULL_MIX if sub >= SUB_FULL_MIX_DB else VOCAL_ONLY
 
 
 def analyze_reference(

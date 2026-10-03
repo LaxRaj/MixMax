@@ -246,6 +246,53 @@ producer tally --key blind/my_song.key.json --responses responses/ --out results
 With fewer than three listeners the report labels itself an anecdote rather
 than a verdict.
 
+### `producer shootout` — the loudness experiment
+
+Renders one track at several published targets so a blind test can answer the
+question the numbers cannot: **once a platform takes the loudness away, does
+chasing it leave the master better or worse?**
+
+```bash
+producer shootout \
+  --source track_with_beat.wav \
+  --reference references/soul.wav \
+  --out-dir shootout/ \
+  --target loud:-8 --target spotify --target ebu_r128 \
+  --competitor landr.wav
+```
+
+```
+Detected full-mix; vocal chain skipped — it would thin a full track's low end.
+
+version             target    LUFS     peak   crest
+as_is                    —   -13.6    -0.39    13.1
+loud_8                  -8    -8.0    -1.00     4.2
+spotify                -14   -14.2    -1.00    11.0
+ebu_r128               -23   -23.0    -9.75    13.1
+
+Limiting engaged for: loud_8, spotify. The rest reached their target on gain alone.
+```
+
+That table is the finding: `loud_8` gave up **9 dB of crest factor** to gain
+5.6 dB of loudness every platform discards. Feed the folder to
+`producer blindtest` and the versions are gain-matched, so the only thing left
+to hear is the limiting.
+
+Three traps it closes for you:
+
+- **Full tracks skip the vocal chain.** An 80 Hz highpass and a de-ess are
+  right for a lone voice and wrong for anything with a kick in it. Detected
+  from sub-bass energy, overridable with `--kind`.
+- **It refuses to ship a vacuous test.** If no version needed limiting they are
+  one master at different levels, and gain-matching makes them the same file —
+  so it says so rather than asking listeners to tell identical audio apart.
+- **It names versions that are identical after matching**, so you do not waste
+  a listening slot on a duplicate.
+
+Loudness targeting is exact: plain gain first (transparent), limiting only when
+a target cannot be reached without it, and true peak held at the ceiling
+because that is what stops lossy encoders distorting.
+
 ### `producer standards` — check against published targets
 
 Every streaming platform normalises playback loudness, which makes most
