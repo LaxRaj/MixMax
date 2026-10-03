@@ -52,8 +52,9 @@ def test_loud_master_is_attenuated_to_the_target() -> None:
     assert any("buys nothing" in x for x in c.consequences)
 
 
-def test_quiet_master_is_raised_where_the_platform_does_that() -> None:
-    c = evaluate(_metrics(-20.0), STANDARDS["spotify"])
+def test_quiet_master_with_headroom_is_raised_to_target() -> None:
+    """Enough headroom (-9 dBTP) means the full lift is applied."""
+    c = evaluate(_metrics(-20.0, true_peak=-9.0), STANDARDS["spotify"])
     assert c.normalization_gain_db == pytest.approx(6.0)
     assert c.delivered_lufs == pytest.approx(-14.0)
 
@@ -66,11 +67,63 @@ def test_youtube_does_not_raise_quiet_masters() -> None:
     assert any("below everything" in x for x in c.consequences)
 
 
-def test_raising_a_master_can_breach_true_peak() -> None:
-    c = evaluate(_metrics(-20.0, true_peak=-2.0), STANDARDS["spotify"])
-    assert c.true_peak_after_norm_dbtp == pytest.approx(4.0)
-    assert not c.conforms
-    assert any("after normalization" in i for i in c.issues)
+def test_upward_gain_is_capped_by_headroom() -> None:
+    """Spotify's own worked example: -20 LUFS peaking at -5 dBTP lands at -16.
+
+    An earlier version applied the full 6 dB and reported true peak at +4 dBTP,
+    which is simply not what the platform does.
+    """
+    c = evaluate(_metrics(-20.0, true_peak=-5.0), STANDARDS["spotify"])
+    assert c.normalization_gain_db == pytest.approx(4.0)
+    assert c.delivered_lufs == pytest.approx(-16.0)
+    assert c.true_peak_after_norm_dbtp == pytest.approx(-1.0)
+    assert any("headroom" in x for x in c.consequences)
+
+
+def test_normalization_never_pushes_past_the_ceiling() -> None:
+    for lufs in (-30.0, -22.0, -18.0, -14.0):
+        for peak in (-9.0, -4.0, -1.5):
+            c = evaluate(_metrics(lufs, true_peak=peak), STANDARDS["spotify"])
+            assert c.true_peak_after_norm_dbtp <= STANDARDS["spotify"].max_true_peak_dbtp + 1e-6
+
+
+def test_spotify_applies_a_stricter_ceiling_above_its_target() -> None:
+    """Masters louder than -14 LUFS are asked to keep true peak below -2 dBTP."""
+    loud = evaluate(_metrics(-10.0, true_peak=-1.5), STANDARDS["spotify"])
+    assert not loud.conforms
+    assert any("stricter ceiling" in i for i in loud.issues)
+
+    on_target = evaluate(_metrics(-14.0, true_peak=-1.5), STANDARDS["spotify"])
+    assert on_target.conforms
+
+
+def test_apple_sound_check_only_turns_down() -> None:
+    """Verified: Sound Check never raises, and is off by default."""
+    assert STANDARDS["apple_music"].normalizes_up is False
+    c = evaluate(_metrics(-24.0), STANDARDS["apple_music"])
+    assert c.normalization_gain_db == 0.0
+    assert c.delivered_lufs == pytest.approx(-24.0)
+
+
+def test_soundcloud_normalizes_nothing() -> None:
+    c = evaluate(_metrics(-8.0), STANDARDS["soundcloud"])
+    assert c.normalization_gain_db == 0.0
+    assert c.delivered_lufs == pytest.approx(-8.0)
+
+
+def test_superseded_aes_document_is_gone() -> None:
+    """TD1004 was superseded by TD1008 in 2021; citing it would be wrong."""
+    assert "aes_streaming" not in STANDARDS
+    assert "aes_td1008_track" in STANDARDS
+    assert STANDARDS["aes_td1008_track"].target_lufs == -16.0
+    assert STANDARDS["aes_td1008_album"].target_lufs == -14.0
+
+
+def test_verified_entries_cite_a_primary_source() -> None:
+    for key, s in STANDARDS.items():
+        assert s.confidence in {"verified", "reported"}, key
+        if s.confidence == "verified":
+            assert s.source and s.source != "Widely reported", key
 
 
 def test_true_peak_over_ceiling_is_flagged() -> None:
@@ -87,10 +140,10 @@ def test_on_target_master_conforms_cleanly() -> None:
     assert c.normalization_gain_db == pytest.approx(0.0)
 
 
-def test_amazon_has_a_stricter_peak_ceiling() -> None:
-    hot = _metrics(-14.0, true_peak=-1.5)
-    assert evaluate(hot, STANDARDS["spotify"]).conforms
-    assert not evaluate(hot, STANDARDS["amazon_music"]).conforms
+def test_reported_entries_are_marked_as_such() -> None:
+    """Figures we could not confirm at a primary source must say so."""
+    assert STANDARDS["amazon_music"].confidence == "reported"
+    assert "not confirmed" in STANDARDS["amazon_music"].notes
 
 
 def test_unmeasurable_loudness_does_not_crash() -> None:

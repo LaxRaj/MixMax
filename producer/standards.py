@@ -39,6 +39,12 @@ class Standard:
     normalizes_down: bool = True
     normalizes_up: bool = False
     tolerance_lu: float = 1.0
+    # Spotify documents a stricter ceiling for masters louder than the target,
+    # because the encoder has less room to absorb inter-sample peaks.
+    max_true_peak_when_loud_dbtp: float | None = None
+    # "verified" = read off the platform's or body's own published document.
+    # "reported" = widely reported but not confirmed at a primary source.
+    confidence: str = "reported"
     notes: str = ""
     source: str = ""
     as_of: str = ""
@@ -53,50 +59,78 @@ class Standard:
 BUILT_IN: tuple[Standard, ...] = (
     Standard(
         key="spotify", name="Spotify", target_lufs=-14.0, max_true_peak_dbtp=-1.0,
-        normalizes_down=True, normalizes_up=True,
-        notes="Turns quiet tracks up too, limiting if that would breach true peak. "
-              "A master louder than -14 is simply attenuated on playback.",
-        source="Spotify Loudness Normalization docs", as_of="2024",
+        max_true_peak_when_loud_dbtp=-2.0,
+        normalizes_down=True, normalizes_up=True, confidence="verified",
+        notes="Applies positive gain to quiet masters, but only as far as their "
+              "headroom allows: a -20 LUFS master peaking at -5 dBTP is lifted to "
+              "-16, not -14. Masters louder than -14 LUFS should keep true peak "
+              "below -2 dBTP.",
+        source="https://support.spotify.com/us/artists/article/loudness-normalization/",
+        as_of="2026-10",
     ),
     Standard(
         key="apple_music", name="Apple Music (Sound Check)", target_lufs=-16.0,
-        max_true_peak_dbtp=-1.0, normalizes_down=True, normalizes_up=True,
-        notes="Sound Check is on by default on most devices.",
-        source="Apple Digital Masters guidance", as_of="2024",
+        max_true_peak_dbtp=-1.0, normalizes_down=True, normalizes_up=False,
+        confidence="verified",
+        notes="Sound Check only turns tracks down, never up, and is off by default "
+              "— so many listeners hear the master unnormalised.",
+        source="Apple Digital Masters guidance; Sound Check behaviour",
+        as_of="2026-10",
     ),
     Standard(
         key="youtube", name="YouTube", target_lufs=-14.0, max_true_peak_dbtp=-1.0,
-        normalizes_down=True, normalizes_up=False,
+        normalizes_down=True, normalizes_up=False, confidence="reported",
         notes="Only attenuates. A master quieter than the target stays quiet and "
               "will sound weak next to everything else.",
-        source="YouTube playback loudness", as_of="2024",
+        source="Widely reported; no primary spec published", as_of="2026-10",
     ),
     Standard(
-        key="amazon_music", name="Amazon Music", target_lufs=-14.0, max_true_peak_dbtp=-2.0,
-        normalizes_down=True, normalizes_up=True, source="Amazon Music mastering guidance",
-        as_of="2024",
+        key="amazon_music", name="Amazon Music", target_lufs=-14.0, max_true_peak_dbtp=-1.0,
+        normalizes_down=True, normalizes_up=True, confidence="reported",
+        notes="Peak ceiling not confirmed at a primary source; -1 dBTP assumed.",
+        source="Widely reported", as_of="2026-10",
     ),
     Standard(
         key="tidal", name="Tidal", target_lufs=-14.0, max_true_peak_dbtp=-1.0,
-        normalizes_down=True, normalizes_up=True, source="Tidal loudness normalization",
-        as_of="2024",
+        normalizes_down=True, normalizes_up=True, confidence="reported",
+        source="Widely reported", as_of="2026-10",
     ),
     Standard(
         key="deezer", name="Deezer", target_lufs=-15.0, max_true_peak_dbtp=-1.0,
-        normalizes_down=True, normalizes_up=True, source="Deezer loudness normalization",
-        as_of="2024",
+        normalizes_down=True, normalizes_up=True, confidence="reported",
+        source="Widely reported", as_of="2026-10",
     ),
     Standard(
-        key="aes_streaming", name="AES streaming recommendation", target_lufs=-16.0,
-        max_true_peak_dbtp=-1.0, tolerance_lu=2.0,
-        notes="AES TD1004 recommends -16 to -20 LUFS for streaming delivery.",
-        source="AES TD1004", as_of="2021",
+        key="aes_td1008_track", name="AES TD1008 (track-normalized)", target_lufs=-16.0,
+        max_true_peak_dbtp=-1.0, tolerance_lu=0.2, confidence="verified",
+        notes="Supersedes TD1004. -16 LUFS for track normalization, +0.2 LU upper "
+              "tolerance, and the document says not to target the upper tolerance. "
+              "Max true peak -1 dBTP at the codec input of lossy streams.",
+        source="AES TD1008 (2021-09-24)", as_of="2021-09",
+    ),
+    Standard(
+        key="aes_td1008_album", name="AES TD1008 (album-normalized)", target_lufs=-14.0,
+        max_true_peak_dbtp=-1.0, tolerance_lu=0.2, confidence="verified",
+        notes="-14 LUFS applies to the loudest track of an album under album "
+              "normalization, as on-demand music services practise it.",
+        source="AES TD1008 (2021-09-24)", as_of="2021-09",
     ),
     Standard(
         key="ebu_r128", name="EBU R128 (broadcast)", target_lufs=-23.0,
         max_true_peak_dbtp=-1.0, tolerance_lu=0.5,
-        notes="Broadcast, not streaming. -23 LUFS +/-0.5 LU.",
-        source="EBU R128", as_of="2020",
+        normalizes_down=True, normalizes_up=False, confidence="verified",
+        notes="Broadcast, not streaming. -23 LUFS +/-0.5 LU (+/-1 LU for live). "
+              "R128 v4.0, August 2020.",
+        source="EBU R128 v4.0", as_of="2020-08",
+    ),
+    Standard(
+        key="soundcloud", name="SoundCloud", target_lufs=-14.0, max_true_peak_dbtp=-1.0,
+        normalizes_down=False, normalizes_up=False, tolerance_lu=6.0,
+        confidence="reported",
+        notes="Applies no loudness normalization, so a quiet master really does "
+              "play quieter than everything around it. The target here is only a "
+              "sanity reference.",
+        source="Widely reported", as_of="2026-10",
     ),
 )
 
@@ -152,12 +186,18 @@ def evaluate(measurement: dict, standard: Standard) -> Conformance:
             issues=["loudness could not be measured"],
         )
 
-    # Platforms differ in whether they only turn down, or also turn up.
+    # Platforms differ in whether they only turn down, or also turn up -- and
+    # upward gain is capped by the master's own headroom. Spotify documents
+    # this: a -20 LUFS master peaking at -5 dBTP is lifted to -16, not -14,
+    # because lifting further would breach the peak ceiling.
     wanted = standard.target_lufs - lufs
     if wanted < 0:
         gain = wanted if standard.normalizes_down else 0.0
+    elif standard.normalizes_up:
+        headroom = standard.max_true_peak_dbtp - true_peak
+        gain = max(0.0, min(wanted, headroom))
     else:
-        gain = wanted if standard.normalizes_up else 0.0
+        gain = 0.0
 
     delivered = lufs + gain
     peak_after = true_peak + gain
@@ -165,9 +205,15 @@ def evaluate(measurement: dict, standard: Standard) -> Conformance:
     issues: list[str] = []
     consequences: list[str] = []
 
-    if true_peak > standard.max_true_peak_dbtp:
+    ceiling = standard.max_true_peak_dbtp
+    if standard.max_true_peak_when_loud_dbtp is not None and lufs > standard.target_lufs:
+        ceiling = standard.max_true_peak_when_loud_dbtp
+
+    if true_peak > ceiling:
         issues.append(
-            f"true peak {true_peak:+.2f} dBTP exceeds {standard.max_true_peak_dbtp:.0f} dBTP"
+            f"true peak {true_peak:+.2f} dBTP exceeds {ceiling:.0f} dBTP"
+            + (" (stricter ceiling applies above the loudness target)"
+               if ceiling != standard.max_true_peak_dbtp else "")
         )
         consequences.append(
             "Inter-sample overs survive the WAV and distort once the platform "
@@ -191,17 +237,27 @@ def evaluate(measurement: dict, standard: Standard) -> Conformance:
             f"{lufs:.1f} LUFS buys nothing here — it only costs dynamic range.{detail}"
         )
     elif gain > WASTED_LIMITING_DB:
-        consequences.append(
-            f"{standard.name} raises this by {gain:+.1f} dB, taking true peak to "
-            f"{peak_after:+.2f} dBTP."
-        )
+        if wanted - gain > 0.1:
+            # Lifted, but not all the way: the master ran out of headroom first.
+            consequences.append(
+                f"{standard.name} would lift this to {standard.target_lufs:.0f} LUFS, but the "
+                f"master only has {standard.max_true_peak_dbtp - true_peak:.1f} dB of headroom "
+                f"above its true peak, so it stops at {delivered:.1f} LUFS."
+            )
+        else:
+            consequences.append(
+                f"{standard.name} raises this by {gain:+.1f} dB, taking true peak to "
+                f"{peak_after:+.2f} dBTP."
+            )
     elif wanted > standard.tolerance_lu and not standard.normalizes_up:
         consequences.append(
             f"{standard.name} does not turn quiet tracks up, so this plays "
             f"{wanted:.1f} LU below everything around it."
         )
 
-    if peak_after > standard.max_true_peak_dbtp and gain > 0:
+    # With the headroom cap in place this should not trigger; it guards a
+    # custom table that declares a platform lifting past its own ceiling.
+    if peak_after > ceiling + 1e-6 and gain > 0:
         issues.append(f"true peak reaches {peak_after:+.2f} dBTP after normalization")
 
     return Conformance(
