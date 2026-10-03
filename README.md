@@ -246,6 +246,50 @@ producer tally --key blind/my_song.key.json --responses responses/ --out results
 With fewer than three listeners the report labels itself an anecdote rather
 than a verdict.
 
+### `producer library` — learn from real releases
+
+Two numbers in this pipeline were invented rather than measured: the QA
+loudness window, and which reference to master against. A corpus of finished
+records replaces both with fact.
+
+```bash
+producer library add --input ~/Music/refs/soul --genre soul
+producer library add --input ~/Music/refs/trap --genre trap
+producer library list
+```
+
+Each track is measured (LUFS, loudness range, true peak, crest, spectral
+balance) and described musically — **tempo**, **key**, and whether it reads as
+a full mix or a bare vocal. Only the measurements are stored; the audio stays
+where it is and never enters the repo.
+
+#### `producer library thresholds [--genre X] --out qa_profile.json`
+
+Derives the QA window from what records in that corpus actually measure:
+
+```
+From 13 reference(s):
+  LUFS window  -21.92 .. -12.64   (built-in was -16.0 .. -9.0)
+  11/13 of the corpus sits inside that window (85%)
+```
+
+That gap is the point — the built-in window would have failed genuinely
+finished records. Then `producer qa --file OUT.wav --profile qa_profile.json`.
+
+It refuses fewer than 8 references, because a handful of tracks just encodes
+their quirks. The corpus pass-rate is reported so a broken window is obvious:
+if most of the records it learned from would fail it, the window is wrong.
+
+#### `producer library match --vocal PATH [--genre X]`
+
+Suggests the reference that asks least of the mastering stage, ranked on
+tempo, brightness, spectral balance and dynamics. Half- and double-time are
+folded together, so 70 and 140 BPM read as the same groove.
+
+It warns when your source reads as a bare vocal but the references are full
+mixes — mastering toward those asks matchering to invent low end that was
+never recorded.
+
 ### `producer tune --vocal PATH --reference PATH --target PATH [--budget N]`
 
 Fits the mix chain to a target master you already trust — LANDR's version of

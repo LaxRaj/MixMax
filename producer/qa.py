@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -16,6 +17,32 @@ CLIPPING_CEILING = 0.999          # full-scale sample magnitude counted as clipp
 LUFS_MIN = -16.0                  # quieter than this and it won't sit with other tracks
 LUFS_MAX = -9.0                   # louder than this and streaming will turn it down
 MONO_CORRELATION_MIN = -0.5       # below this, the mix partially cancels in mono
+
+
+@dataclass(frozen=True)
+class QAProfile:
+    """The window a master is judged against.
+
+    The defaults are hand-picked and admittedly arbitrary. `producer library
+    thresholds` replaces them with percentiles measured off real releases, so
+    a master is judged against the company it will keep.
+    """
+
+    lufs_min: float = LUFS_MIN
+    lufs_max: float = LUFS_MAX
+    source: str = "built-in defaults"
+
+    @classmethod
+    def load(cls, path: str | Path) -> "QAProfile":
+        data = json.loads(Path(path).read_text())
+        return cls(
+            lufs_min=float(data["lufs_min"]),
+            lufs_max=float(data["lufs_max"]),
+            source=f"{data.get('genre', 'corpus')} ({data.get('derived_from', '?')} references)",
+        )
+
+
+DEFAULT_PROFILE = QAProfile()
 
 
 @dataclass
@@ -67,14 +94,14 @@ def _mono_compatible(track: Track) -> bool:
     return correlation > MONO_CORRELATION_MIN
 
 
-def run_qa(path: str | Path) -> dict:
+def run_qa(path: str | Path, profile: QAProfile = DEFAULT_PROFILE) -> dict:
     """Run every QA check on the file at `path`."""
     track = Track.load(path)
 
     lufs = _integrated_lufs(track)
     clipping_detected = _is_clipping(track.samples)
     mono_compatible = _mono_compatible(track)
-    loudness_ok = bool(np.isfinite(lufs) and LUFS_MIN <= lufs <= LUFS_MAX)
+    loudness_ok = bool(np.isfinite(lufs) and profile.lufs_min <= lufs <= profile.lufs_max)
 
     flags: list[str] = []
     if clipping_detected:
@@ -82,10 +109,10 @@ def run_qa(path: str | Path) -> dict:
     if not loudness_ok:
         if not np.isfinite(lufs):
             flags.append("loudness: too short or too quiet to measure")
-        elif lufs < LUFS_MIN:
-            flags.append(f"loudness: {lufs:.1f} LUFS is quieter than {LUFS_MIN:.0f}")
+        elif lufs < profile.lufs_min:
+            flags.append(f"loudness: {lufs:.1f} LUFS is quieter than {profile.lufs_min:.1f}")
         else:
-            flags.append(f"loudness: {lufs:.1f} LUFS is louder than {LUFS_MAX:.0f}")
+            flags.append(f"loudness: {lufs:.1f} LUFS is louder than {profile.lufs_max:.1f}")
     if not mono_compatible:
         flags.append("mono: channels partially cancel when folded to mono")
 

@@ -26,3 +26,8 @@ out/
 # Working folders — audio stays local, structure is tracked
 !vocals/README.md
 !references/README.md
+
+# Reference library — catalogue is derived data, audio stays out
+reference_library.json
+qa_profile.json
+chain_params.json

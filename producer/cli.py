@@ -9,10 +9,19 @@ from pathlib import Path
 import click
 
 from producer.analysis import analyze_vocal
+from producer.benchmark import measure as measure_audio
 from producer.batch import run_batch
 from producer.benchmark import build_benchmark_report, compare, discover_versions
 from producer.blindtest import build_blind_test, build_tally_report, tally
 from producer.intake import DEFAULT_SERVICES, run_intake
+from producer.library import (
+    Library,
+    analyze_reference,
+    derive_thresholds,
+    discover_references,
+    match_reference,
+    summarize,
+)
 from producer.workspace import (
     REFERENCE_STEM,
     MissingReference,
@@ -23,7 +32,7 @@ from producer.workspace import (
 from producer.audio import human_size
 from producer.mastering import master_track
 from producer.mix import ChainParams, DEFAULT_PARAMS, mix_vocal
-from producer.qa import run_qa
+from producer.qa import DEFAULT_PROFILE, QAProfile, run_qa
 from producer.tune import tune_chain
 from producer.report_plot import plot_comparison
 
@@ -97,9 +106,12 @@ def echo_qa(report: dict) -> None:
 
 @cli.command()
 @click.option("--file", "file_path", required=True, type=EXISTING_FILE, help="Audio to check.")
-def qa(file_path: Path) -> None:
+@click.option("--profile", "profile_path", type=EXISTING_FILE,
+              help="QA thresholds from `producer library thresholds`.")
+def qa(file_path: Path, profile_path: Path | None) -> None:
     """Run the automated QA gate against FILE and print the report as JSON."""
-    click.echo(json.dumps(run_qa(file_path), indent=2))
+    profile = QAProfile.load(profile_path) if profile_path else DEFAULT_PROFILE
+    click.echo(json.dumps(run_qa(file_path, profile), indent=2))
 
 
 @cli.command()
@@ -314,3 +326,147 @@ def tune(vocal: Path, reference: Path, target: Path, out_path: Path, budget: int
         "Measured similarity only. Put it through a blind test before trusting it.",
         fg="yellow",
     )
+
+
+DEFAULT_LIBRARY = Path("reference_library.json")
+LIBRARY_OPT = click.option(
+    "--library", "library_path", type=OUT_FILE, default=DEFAULT_LIBRARY,
+    show_default=True, help="Catalogue file.",
+)
+
+
+@cli.group()
+def library() -> None:
+    """Build a reference library from real releases, and learn from it."""
+
+
+@library.command("add")
+@click.option("--input", "source", required=True,
+              type=click.Path(exists=True, path_type=Path),
+              help="A song, or a folder of them (searched recursively).")
+@click.option("--genre", default="unspecified", show_default=True,
+              help="Tag these tracks, so thresholds can be derived per style.")
+@click.option("--kind", type=click.Choice(["full-mix", "vocal-only"]),
+              help="Override the automatic full-mix / vocal-only detection.")
+@LIBRARY_OPT
+def library_add(source: Path, genre: str, kind: str | None, library_path: Path) -> None:
+    """Measure reference tracks and catalogue them.
+
+    Only measurements are stored — the audio stays where it is.
+    """
+    paths = discover_references(source)
+    if not paths:
+        raise click.ClickException(f"No audio found under {source}.")
+
+    catalogue = Library.load(library_path)
+    with click.progressbar(paths, label="  analysing", item_show_func=lambda p: p.name if p else "") as items:
+        for path in items:
+            try:
+                catalogue.add(analyze_reference(path, genre=genre, kind=kind))
+            except Exception as exc:
+                click.echo(f"\n  skipped {path.name}: {exc}")
+
+    catalogue.save(library_path)
+    click.echo(f"{len(catalogue)} reference(s) catalogued -> {library_path}")
+    click.echo(f"Genres: {', '.join(catalogue.genres)}")
+
+
+@library.command("list")
+@click.option("--genre", help="Only this genre.")
+@LIBRARY_OPT
+def library_list(genre: str | None, library_path: Path) -> None:
+    """Show what is in the library."""
+    entries = Library.load(library_path).filter(genre=genre)
+    if not entries:
+        raise click.ClickException("Library is empty. Run `producer library add` first.")
+
+    click.echo(f"{'title':<34} {'genre':<12} {'kind':<11} {'bpm':>6} {'key':<9} {'LUFS':>7}")
+    for e in sorted(entries, key=lambda x: (x.genre, x.title)):
+        click.echo(
+            f"{e.title[:33]:<34} {e.genre[:11]:<12} {e.kind:<11} "
+            f"{e.tempo_bpm:>6.1f} {e.key:<9} {e.lufs:>7.1f}"
+        )
+
+
+@library.command("stats")
+@click.option("--genre", help="Only this genre.")
+@LIBRARY_OPT
+def library_stats(genre: str | None, library_path: Path) -> None:
+    """What finished records in the library actually measure like."""
+    entries = Library.load(library_path).filter(genre=genre)
+    if not entries:
+        raise click.ClickException("Nothing to summarise. Run `producer library add` first.")
+    click.echo(json.dumps(summarize(entries, genre).to_dict(), indent=2))
+
+
+@library.command("thresholds")
+@click.option("--genre", help="Derive from this genre only.")
+@click.option("--out", "out_path", type=OUT_FILE, default="qa_profile.json", show_default=True)
+@LIBRARY_OPT
+def library_thresholds(genre: str | None, out_path: Path, library_path: Path) -> None:
+    """Replace the hand-picked QA window with one measured off real records."""
+    entries = Library.load(library_path).filter(genre=genre)
+    try:
+        profile = derive_thresholds(entries, genre)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(profile, indent=2) + "\n")
+
+    click.echo(f"From {profile['derived_from']} reference(s):")
+    click.echo(f"  LUFS window  {profile['lufs_min']} .. {profile['lufs_max']}   "
+               f"(built-in was {DEFAULT_PROFILE.lufs_min} .. {DEFAULT_PROFILE.lufs_max})")
+    click.echo(f"  {profile['corpus_inside_window']}/{profile['derived_from']} of the corpus "
+               f"sits inside that window ({profile['corpus_pass_rate'] * 100:.0f}%) — "
+               "trimming at p5/p95 deliberately leaves the extremes out.")
+    click.echo(f"Profile -> {out_path}")
+    click.echo("Use it:  producer qa --file OUT.wav --profile " + str(out_path))
+    click.secho(
+        "This is what these records measure like, not what sounds good.", fg="yellow"
+    )
+
+
+@library.command("match")
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="The vocal to find a reference for.")
+@click.option("--genre", help="Restrict to this genre.")
+@click.option("--top", default=3, show_default=True, help="How many suggestions.")
+@LIBRARY_OPT
+def library_match(vocal: Path, genre: str | None, top: int, library_path: Path) -> None:
+    """Suggest the reference that asks the least of the mastering stage."""
+    catalogue = Library.load(library_path)
+    if not len(catalogue):
+        raise click.ClickException("Library is empty. Run `producer library add` first.")
+
+    metrics = measure_vocal(vocal)
+    ranked = match_reference(catalogue, metrics, tempo_bpm=metrics.get("tempo_bpm"), genre=genre)
+    if not ranked:
+        raise click.ClickException(f"No references match genre={genre!r}.")
+
+    source_kind = classify_vocal_kind(metrics)
+    for entry, score in ranked[:top]:
+        click.echo(f"  {score:6.3f}  {entry.title[:38]:<40} {entry.genre:<12} "
+                   f"{entry.tempo_bpm:>5.1f}bpm  {entry.key}")
+    click.echo(f"\nBest: {ranked[0][0].path}")
+
+    mismatched = [e for e, _ in ranked[:top] if e.kind != source_kind]
+    if source_kind == "vocal-only" and mismatched:
+        click.secho(
+            "Your source reads as a bare vocal but these references are full mixes. "
+            "Mastering toward them asks matchering to invent low end that was never "
+            "recorded — prefer vocal-only references, or master after the beat is in.",
+            fg="yellow",
+        )
+
+
+def measure_vocal(path: Path) -> dict:
+    """Measurements plus tempo, which is what reference matching ranks on."""
+    metrics = measure_audio(path)
+    metrics["tempo_bpm"] = analyze_vocal(path)["tempo_bpm"]
+    return metrics
+
+
+def classify_vocal_kind(metrics: dict) -> str:
+    from producer.library import classify_kind
+
+    return classify_kind(metrics["band_balance_db"])

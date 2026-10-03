@@ -4,7 +4,7 @@
 
 - **Success metric:** `producer batch` runs against 3–5 real vocal files from friends and produces a `report.md` with automated QA results, plus your own subjective "does this sound release-ready" verdict per file.
 - **Deadline:** ~1 week out (assumption — 6 milestones, each ≤1 day; adjust if wrong).
-- **Status:** M0–M7 built plus chain fitting, 105 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: reference tracks** — `producer render` needs one per track, or a fallback.
+- **Status:** M0–M7 built plus chain fitting and a reference library, 121 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: reference tracks** — `producer render` needs one per track, or a fallback.
 - **Repo:** `~/Desktop/projects/MixMax` — https://github.com/LaxRaj/MixMax
 
 ## Non-goals
@@ -267,3 +267,8 @@
 2026-10-03 — `producer tune` fits the chain to a measured target, and says so loudly. — "Train the producer" has an honest reading (close the measured gap to a master you trust) and a dishonest one (have software judge what sounds good); only the first is buildable, so every output repeats that a smaller distance is a lead, not a verdict.
 2026-10-03 — The tuning distance excludes loudness. — Matchering sets loudness from the reference, so scoring it would optimise for the reference choice rather than the chain.
 2026-10-03 — Chain parameters moved into `ChainParams` with the shipped values as defaults. — Tuning needs a search space, and a test pins the defaults so the refactor cannot silently change what everyone has been listening to.
+2026-10-03 — Added a reference library built from real releases, deriving QA thresholds and reference choice from it. — The shipped -16..-9 LUFS window and the by-hand reference pick were the two places the pipeline ran on my guesses; a corpus of finished records replaces both with measurement.
+2026-10-03 — Derived thresholds need at least 8 references and report what fraction of the corpus they admit. — A window derived from three tracks encodes their quirks, and one that fails most of its own corpus is broken; both failures are now visible rather than silent.
+2026-10-03 — The library stores measurements only, never audio. — Reference tracks are commercial records; the catalogue is derived data and the audio stays wherever the user keeps it.
+2026-10-03 — Tracks are classified full-mix vs vocal-only from low-end energy. — Mastering a bare vocal toward a full-mix reference asks matchering to invent bass that was never recorded, which looks like a chain fault and is not one.
+2026-10-03 — Tempo matching folds half and double time. — 70 and 140 BPM are the same groove, and librosa reports either; without folding, the right reference ranks as the most distant.
