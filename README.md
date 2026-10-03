@@ -246,6 +246,60 @@ producer tally --key blind/my_song.key.json --responses responses/ --out results
 With fewer than three listeners the report labels itself an anecdote rather
 than a verdict.
 
+### `producer deliver` — master into platform normalisation
+
+Streaming normalisation is usually treated as something done *to* a master. It
+can be aimed at instead.
+
+A master sitting on Spotify's −14 LUFS target with −1 dBTP has no headroom, so
+the platform cannot lift it and it plays at −14. A **quieter, more dynamic**
+master at −16 LUFS with **−3 dBTP** leaves exactly the 2 dB Spotify wants to
+close — so it arrives at −14 LUFS with the dynamics of a −16 master.
+
+```bash
+producer deliver --source mix.wav --out MASTER.wav --lufs -16 --standard spotify
+```
+
+```
+Mastered to -16.2 LUFS @ -3.00 dBTP  (limited)
+Spotify lifts it +2.0 dB -> delivered -14.2 LUFS @ -1.00 dBTP
+Lands on Spotify's target while keeping the dynamics of a -16 LUFS master.
+```
+
+This only works where a platform raises quiet tracks. Apple Sound Check and
+YouTube only turn things down, so headroom buys nothing there and the normal
+ceiling applies.
+
+### `producer structure` — break the arrangement down
+
+Turning a loop into a song is an arrangement problem, not a processing one — no
+amount of mastering adds a bridge. This segments a track, groups sections that
+sound alike, and says where the arrangement is thin.
+
+```bash
+producer structure --source mix.wav --out arrangement.md
+```
+
+```
+ # sec   start    len   energy  onsets/s      low
+ 1 A    0:00        7s   -33.6       3.6   -10.0
+ 2 B    0:07       13s   -22.3       6.0   -13.5
+ 3 C    0:20       12s   -25.4       6.6   -11.7
+ ...
+repetition: Ax1 Bx4 Cx2 Dx2 Ex1
+transitions:
+  ▲ lift  at 0:07  A -> B  +11.2 dB
+```
+
+It checks specifically for the thing people mean by a **drop** — the low end
+being pulled out and brought back, not just an energy dip — and names where to
+put one. Flatness is judged on the body, since an intro and outro are supposed
+to be quiet.
+
+It reports tempo and key as search parameters for finding compatible beats, but
+**nothing here queries a streaming catalogue**. To rank candidates, add them
+with `producer library add` and use `producer library match`.
+
 ### `producer shootout` — the loudness experiment
 
 Renders one track at several published targets so a blind test can answer the

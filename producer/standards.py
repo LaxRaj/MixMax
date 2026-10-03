@@ -279,6 +279,35 @@ def evaluate_all(measurement: dict, standards: dict[str, Standard] | None = None
     return [evaluate(measurement, s) for s in table.values()]
 
 
+def delivery_ceiling(our_lufs: float, standard: Standard) -> float:
+    """The true-peak ceiling that lets a platform lift us onto its target.
+
+    Normalisation is usually treated as something done *to* a master. It can be
+    aimed at instead: leave exactly as much headroom as the platform needs to
+    raise you, and a quieter, more dynamic master arrives at full playback
+    loudness. A master at the target with no headroom cannot be lifted at all,
+    so it plays quieter than everything around it.
+
+    Returns the platform's own ceiling when we are already at or above target.
+    """
+    if not standard.normalizes_up:
+        return standard.max_true_peak_dbtp
+    lift_needed = standard.target_lufs - our_lufs
+    if lift_needed < 0:
+        # Strictly louder than the target. Spotify's stricter ceiling is worded
+        # for masters *above* -14 LUFS, so sitting exactly on it does not
+        # trigger it -- an inclusive test would demand 1 dB of headroom for
+        # nothing.
+        return (
+            standard.max_true_peak_when_loud_dbtp
+            if standard.max_true_peak_when_loud_dbtp is not None
+            else standard.max_true_peak_dbtp
+        )
+    # Leave exactly the gap the platform wants to close. At the target this is
+    # the platform's own ceiling, unchanged.
+    return standard.max_true_peak_dbtp - lift_needed
+
+
 def to_qa_profile(standard: Standard) -> dict:
     """A QA profile that accepts masters this standard will deliver cleanly."""
     return {

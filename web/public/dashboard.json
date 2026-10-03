@@ -17,7 +17,7 @@
     {
       "key": "benchmark",
       "label": "Benchmarked",
-      "done": 0,
+      "done": 1,
       "total": 2,
       "blurb": "A commercial master to compare against."
     },
@@ -33,11 +33,14 @@
     {
       "slug": "iced-latte",
       "versions": [
+        "MASTER",
         "original"
       ],
       "has_ours": false,
       "has_reference": false,
-      "competitors": []
+      "competitors": [
+        "MASTER"
+      ]
     },
     {
       "slug": "sector-79-60",

@@ -1,0 +1,152 @@
+{
+  "duration_s": 117.52,
+  "tempo_bpm": 148.0,
+  "key": "G# minor",
+  "sections": [
+    {
+      "index": 0,
+      "label": "A",
+      "start_s": 0.0,
+      "end_s": 7.45,
+      "energy_db": -33.57,
+      "onset_rate": 3.63,
+      "brightness_hz": 2090.0,
+      "low_energy_db": -10.02,
+      "duration_s": 7.45
+    },
+    {
+      "index": 1,
+      "label": "B",
+      "start_s": 7.45,
+      "end_s": 20.01,
+      "energy_db": -22.33,
+      "onset_rate": 6.05,
+      "brightness_hz": 2283.0,
+      "low_energy_db": -13.5,
+      "duration_s": 12.56
+    },
+    {
+      "index": 2,
+      "label": "C",
+      "start_s": 20.01,
+      "end_s": 32.21,
+      "energy_db": -25.35,
+      "onset_rate": 6.56,
+      "brightness_hz": 1451.0,
+      "low_energy_db": -11.66,
+      "duration_s": 12.2
+    },
+    {
+      "index": 3,
+      "label": "B",
+      "start_s": 32.21,
+      "end_s": 50.41,
+      "energy_db": -22.99,
+      "onset_rate": 5.22,
+      "brightness_hz": 2214.0,
+      "low_energy_db": -11.23,
+      "duration_s": 18.2
+    },
+    {
+      "index": 4,
+      "label": "D",
+      "start_s": 50.41,
+      "end_s": 70.69,
+      "energy_db": -23.25,
+      "onset_rate": 5.62,
+      "brightness_hz": 2462.0,
+      "low_energy_db": -11.16,
+      "duration_s": 20.28
+    },
+    {
+      "index": 5,
+      "label": "B",
+      "start_s": 70.69,
+      "end_s": 84.84,
+      "energy_db": -22.38,
+      "onset_rate": 5.58,
+      "brightness_hz": 2156.0,
+      "low_energy_db": -11.34,
+      "duration_s": 14.15
+    },
+    {
+      "index": 6,
+      "label": "C",
+      "start_s": 84.84,
+      "end_s": 91.37,
+      "energy_db": -23.88,
+      "onset_rate": 4.9,
+      "brightness_hz": 1692.0,
+      "low_energy_db": -10.78,
+      "duration_s": 6.53
+    },
+    {
+      "index": 7,
+      "label": "D",
+      "start_s": 91.37,
+      "end_s": 97.44,
+      "energy_db": -22.9,
+      "onset_rate": 5.6,
+      "brightness_hz": 2265.0,
+      "low_energy_db": -10.42,
+      "duration_s": 6.07
+    },
+    {
+      "index": 8,
+      "label": "B",
+      "start_s": 97.44,
+      "end_s": 111.22,
+      "energy_db": -23.74,
+      "onset_rate": 5.73,
+      "brightness_hz": 2210.0,
+      "low_energy_db": -10.44,
+      "duration_s": 13.78
+    },
+    {
+      "index": 9,
+      "label": "E",
+      "start_s": 111.22,
+      "end_s": 117.52,
+      "energy_db": -28.08,
+      "onset_rate": 5.55,
+      "brightness_hz": 1837.0,
+      "low_energy_db": -7.94,
+      "duration_s": 6.3
+    }
+  ],
+  "transitions": [
+    {
+      "at_s": 7.45,
+      "from_label": "A",
+      "to_label": "B",
+      "energy_change_db": 11.24,
+      "kind": "lift"
+    },
+    {
+      "at_s": 20.01,
+      "from_label": "B",
+      "to_label": "C",
+      "energy_change_db": -3.02,
+      "kind": "drop"
+    },
+    {
+      "at_s": 111.22,
+      "from_label": "B",
+      "to_label": "E",
+      "energy_change_db": -4.34,
+      "kind": "drop"
+    }
+  ],
+  "repetition": {
+    "A": 1,
+    "B": 4,
+    "C": 2,
+    "D": 2,
+    "E": 1
+  },
+  "notes": [
+    "At 2.0 min this is about 32s short of a typical single (2.5-4.0 min). Another section, or a repeat of the strongest one, closes the gap.",
+    "After the intro the energy never moves more than 3.0 dB \u2014 every section from 0:07 to 1:51 sits at the same level. However good it sounds, that reads as one long idea.",
+    "No section pulls the low end out: every part sits within 5.6 dB of the same bass level, so nothing ever drops. Filtering the bass and kick for a bar or two before **B** returns (first at 0:07) is what makes its return land."
+  ]
+}

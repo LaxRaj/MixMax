@@ -35,7 +35,12 @@ from producer.mastering import master_track
 from producer.mix import ChainParams, DEFAULT_PARAMS, mix_vocal
 from producer.qa import DEFAULT_PROFILE, QAProfile, run_qa
 from producer.shootout import DEFAULT_TARGETS, build_shootout, build_shootout_report
+from producer.structure import analyze_structure, build_structure_report
+from producer.master_chain import DEFAULT_MASTER_PARAMS, master_full_mix
+from producer.loudness import normalize_to_target
 from producer.standards import (
+    delivery_ceiling,
+    evaluate,
     evaluate_all,
     load_standards,
     summarize_conformance,
@@ -730,3 +735,113 @@ def shootout(
 
     click.echo(f"\nReport -> {report}")
     click.echo(f"Next:  producer blindtest --versions-dir {out_dir} --out-dir blind/<slug>")
+
+
+@cli.command()
+@click.option("--source", required=True, type=EXISTING_FILE, help="The mix to master.")
+@click.option("--out", "out_path", required=True, type=OUT_FILE, help="Destination WAV.")
+@click.option("--lufs", "target_lufs", default=-16.0, show_default=True, type=float,
+              help="The loudness you actually want the master to have.")
+@click.option("--standard", "standard_key", default="spotify", show_default=True,
+              help="The platform whose normalisation we aim at.")
+@click.option("--reference", type=EXISTING_FILE, help="Match tone against this track.")
+@click.option("--no-chain", is_flag=True, help="Skip the mastering chain; set loudness only.")
+def deliver(
+    source: Path, out_path: Path, target_lufs: float, standard_key: str,
+    reference: Path | None, no_chain: bool,
+) -> None:
+    """Master to a chosen loudness, leaving headroom for the platform to lift.
+
+    A master sitting on the platform's target with no headroom cannot be raised,
+    so it plays quieter than everything else. Leaving exactly the gap the
+    platform wants to close means a quieter, more dynamic master still arrives
+    at full playback loudness.
+    """
+    table = load_standards()
+    if standard_key not in table:
+        raise click.ClickException(
+            f"Unknown standard {standard_key!r}. Available: {', '.join(table)}."
+        )
+    standard = table[standard_key]
+    ceiling = delivery_ceiling(target_lufs, standard)
+
+    import tempfile as _tempfile
+
+    with _tempfile.TemporaryDirectory() as tmp:
+        staged = Path(tmp) / "staged.wav"
+        if no_chain:
+            import shutil
+
+            shutil.copyfile(source, staged)
+        else:
+            info = master_full_mix(source, staged, DEFAULT_MASTER_PARAMS)
+            if info["mono_source"]:
+                click.secho("Mono source — no stereo image to work with.", fg="yellow")
+
+        if reference is not None:
+            matched = Path(tmp) / "matched.wav"
+            master_track(staged, reference, matched)
+            staged = matched
+
+        result = normalize_to_target(staged, out_path, target_lufs, ceiling)
+
+    conformance = evaluate(measure_audio(out_path), standard)
+    click.echo(
+        f"Mastered to {result.achieved_lufs:.1f} LUFS @ {result.true_peak_dbtp:+.2f} dBTP"
+        f"  ({'limited' if result.limited else 'gain only'})"
+    )
+    click.echo(
+        f"{standard.name} lifts it {conformance.normalization_gain_db:+.1f} dB "
+        f"-> delivered {conformance.delivered_lufs:.1f} LUFS "
+        f"@ {conformance.true_peak_after_norm_dbtp:+.2f} dBTP"
+    )
+    if abs(conformance.delivered_lufs - standard.target_lufs) <= 0.3:
+        click.secho(
+            f"Lands on {standard.name}'s target while keeping the dynamics of a "
+            f"{target_lufs:.0f} LUFS master.", fg="green")
+    click.echo(f"Master -> {out_path}")
+
+
+@cli.command()
+@click.option("--source", required=True, type=EXISTING_FILE, help="The track to break down.")
+@click.option("--out", "out_path", type=OUT_FILE, help="Write the markdown report here.")
+@click.option("--json", "json_path", type=OUT_FILE, help="Write the raw structure as JSON.")
+def structure(source: Path, out_path: Path | None, json_path: Path | None) -> None:
+    """Break a track into sections and say where the arrangement is thin.
+
+    Turning a loop into a song is an arrangement problem, not a processing one —
+    no amount of mastering adds a bridge.
+    """
+    result = analyze_structure(source)
+
+    click.echo(f"{result.duration_s / 60:.2f} min · {result.tempo_bpm:.0f} BPM · {result.key}\n")
+    click.echo(f"{'#':>2} {'sec':<4} {'start':>6} {'len':>6} {'energy':>8} {'onsets/s':>9} {'low':>8}")
+    for s in result.sections:
+        click.echo(
+            f"{s.index + 1:>2} {s.label:<4} {int(s.start_s // 60)}:{int(s.start_s % 60):02d}".ljust(22)
+            + f"{s.duration_s:>5.0f}s {s.energy_db:>7.1f} {s.onset_rate:>9.1f} {s.low_energy_db:>7.1f}"
+        )
+
+    click.echo("\nrepetition: " + (" ".join(f"{k}x{v}" for k, v in result.repetition.items()) or "—"))
+    if result.transitions:
+        click.echo("transitions:")
+        for t in result.transitions:
+            arrow = "▲" if t["kind"] == "lift" else "▼"
+            click.echo(f"  {arrow} {t['kind']:<5} at {int(t['at_s'] // 60)}:{int(t['at_s'] % 60):02d}  "
+                       f"{t['from_label']} -> {t['to_label']}  {t['energy_change_db']:+.1f} dB")
+    else:
+        click.secho("transitions: none — nothing drops or builds.", fg="yellow")
+
+    if result.notes:
+        click.echo("\nwhat the arrangement is missing:")
+        for note in result.notes:
+            click.echo(f"  - {note}")
+
+    if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(build_structure_report(result, title=f"Arrangement — {source.stem}"))
+        click.echo(f"\nReport -> {out_path}")
+    if json_path is not None:
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        json_path.write_text(json.dumps(result.to_dict(), indent=2) + "\n")
+        click.echo(f"JSON   -> {json_path}")
