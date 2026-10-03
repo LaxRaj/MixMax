@@ -683,9 +683,15 @@ def shootout(
 
     if not result["tonal_matching"]:
         click.secho("No reference given — setting loudness only, tone untouched.", fg="yellow")
-    click.echo(f"Detected {result['kind']}; vocal chain "
-               + ("applied." if result["vocal_chain_applied"]
-                  else "skipped — it would thin a full track's low end."))
+    click.echo(f"Detected {result['kind']}; "
+               + ("vocal chain applied."
+                  if result["vocal_chain_applied"]
+                  else "mastering chain applied (subsonic cleanup + gentle glue)."))
+    if result.get("mono_source"):
+        click.secho(
+            "Source is mono — no stereo image to work with. Widening one means "
+            "inventing the side signal, which costs mono compatibility, so it was "
+            "left alone.", fg="yellow")
     click.echo(f"\n{'version':<18} {'target':>7} {'LUFS':>7} {'peak':>8} {'crest':>7}")
     for v in result["versions"]:
         target = f"{v['target_lufs']:.0f}" if v["target_lufs"] is not None else "—"

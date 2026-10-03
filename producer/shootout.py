@@ -15,6 +15,7 @@ from tempfile import TemporaryDirectory
 from producer.benchmark import measure
 from producer.library import FULL_MIX, VOCAL_ONLY, classify_track
 from producer.loudness import LoudnessResult, normalize_to_target
+from producer.master_chain import DEFAULT_MASTER_PARAMS, MasterParams, master_full_mix
 from producer.mastering import master_track
 from producer.mix import DEFAULT_PARAMS, ChainParams
 from producer.mix import mix_vocal
@@ -92,6 +93,7 @@ def build_shootout(
     targets: tuple[str, ...] = DEFAULT_TARGETS,
     kind: str | None = None,
     params: ChainParams = DEFAULT_PARAMS,
+    master_params: MasterParams = DEFAULT_MASTER_PARAMS,
     competitors: dict[str, Path] | None = None,
     include_original: bool = True,
     standards: dict[str, Standard] | None = None,
@@ -108,9 +110,17 @@ def build_shootout(
 
     with TemporaryDirectory() as tmp:
         staged = source
+        chain_note: dict = {}
         if kind == VOCAL_ONLY:
+            # A lone voice wants the vocal chain: rumble out, gate, compress,
+            # de-ess, a little space.
             staged = Path(tmp) / "premixed.wav"
             mix_vocal(source, staged, params)
+        else:
+            # A finished mix wants the mastering chain instead: subsonic
+            # cleanup and gentle glue, nothing that reshapes the balance.
+            staged = Path(tmp) / "premastered.wav"
+            chain_note = master_full_mix(source, staged, master_params)
 
         as_is = out_dir / f"{AS_IS}.wav"
         if reference is not None:
@@ -162,6 +172,8 @@ def build_shootout(
         "tonal_matching": reference is not None,
         "kind": kind,
         "vocal_chain_applied": kind == VOCAL_ONLY,
+        "master_chain_applied": kind != VOCAL_ONLY,
+        "mono_source": chain_note.get("mono_source"),
         "versions": [v.to_dict() for v in versions],
         # If nothing needed limiting, every rendered version is the same audio
         # at a different level -- and the blind test will gain-match them into
@@ -182,7 +194,11 @@ def build_shootout_report(result: dict) -> str:
          "> Supply one to enable reference matching.\n\n")
         + f"Source: `{Path(result['source']).name}` — detected as **{result['kind']}**"
         + (", vocal chain applied." if result["vocal_chain_applied"]
-           else ", vocal chain skipped (it would thin the low end of a full track)."),
+           else ", mastering chain applied (subsonic cleanup + gentle glue)."),
+        "",
+        ("> **Mono source.** There is no stereo image to work with, and widening a "
+         "mono file means inventing the difference signal — which buys width by "
+         "damaging mono fold-down. Left alone.\n" if result.get("mono_source") else ""),
         "",
         "| Version | Target | LUFS | True peak | Crest | LRA |",
         "| --- | --- | --- | --- | --- | --- |",
