@@ -509,6 +509,38 @@ version decodes and plays at once, switching does not restart a source or lose
 position, nothing in the DOM or network traffic reveals which version is which,
 and the exported CSV matches the schema `producer tally` reads.
 
+### `producer compare` — how finished is each song
+
+A compliant master of a bare vocal is still a bare vocal. This tracks
+**completion rather than conformance**: which stages each track has cleared,
+and what is actually stopping the rest.
+
+```bash
+producer compare --workspace comparisons   # then open /compare
+```
+
+```
+iced-latte  —  90%  (full-mix, 3.09 min)
+   ✓ Raw material       118s, 48 kHz, mono
+   ✓ Backing track      arrived as a finished mix, vocal already over the beat
+   ✓ Master             -16.1 LUFS @ -3.00 dBTP → Spotify delivers -14.1
+   ✓ Arrangement        3.09 min, 5 section types, with a breakdown
+   ~ Judged by ear      1 listener — an anecdote, not a verdict
+
+nani-ki-kahani  —  50%  (vocal-only, 2.40 min)
+   ✓ Vocal production   chain applied — loudness range 7.59 → 4.6 LU
+   ✗ Backing track      there is no instrumental under this vocal
+   ✓ Master             -16.2 LUFS @ -3.00 dBTP → Spotify delivers -14.2
+   · Arrangement        2.40 min, no breakdown
+```
+
+A **blocked** stage is one nothing in this pipeline can clear. A vocal with no
+instrumental under it is not a song, and no amount of processing changes that —
+so the view says so rather than reporting a healthy-looking master.
+
+The `/compare` page renders the same data with an arrangement timeline per
+track, where a breakdown shows as a gap because the low end is what left.
+
 ### `producer dashboard` — the evidence ledger
 
 ```bash

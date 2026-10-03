@@ -1,0 +1,484 @@
+{
+  "tracks": [
+    {
+      "slug": "iced-latte",
+      "kind": "full-mix",
+      "kind_reason": "plays continuously (0.2% quiet), sub at -31 dB",
+      "duration_s": 185.4,
+      "percent": 90,
+      "stages": [
+        {
+          "key": "intake",
+          "label": "Raw material",
+          "state": "done",
+          "detail": "118s, 48 kHz, mono",
+          "blocker": ""
+        },
+        {
+          "key": "backing",
+          "label": "Backing track",
+          "state": "done",
+          "detail": "arrived as a finished mix, vocal already over the beat",
+          "blocker": ""
+        },
+        {
+          "key": "master",
+          "label": "Master",
+          "state": "done",
+          "detail": "-16.1 LUFS @ -3.00 dBTP \u2192 Spotify delivers -14.1",
+          "blocker": ""
+        },
+        {
+          "key": "arrangement",
+          "label": "Arrangement",
+          "state": "done",
+          "detail": "3.09 min, 5 section types, with a breakdown",
+          "blocker": ""
+        },
+        {
+          "key": "judged",
+          "label": "Judged by ear",
+          "state": "partial",
+          "detail": "1 listener \u2014 an anecdote, not a verdict",
+          "blocker": "needs 2 more"
+        }
+      ],
+      "measurements": {
+        "raw": {
+          "lufs": -23.61,
+          "true_peak_dbtp": -4.87,
+          "crest_factor_db": 18.77,
+          "lra": 4.6
+        },
+        "final": {
+          "lufs": -16.11,
+          "true_peak_dbtp": -3.0,
+          "crest_factor_db": 12.15,
+          "lra": 1.95
+        },
+        "final_file": "MASTER_extended.wav"
+      },
+      "arrangement": {
+        "sections": 10,
+        "types": 5,
+        "transitions": [
+          {
+            "at_s": 7.25,
+            "from_label": "A",
+            "to_label": "B",
+            "energy_change_db": 7.8,
+            "low_change_db": -2.39,
+            "kind": "lift"
+          },
+          {
+            "at_s": 110.57,
+            "from_label": "B",
+            "to_label": "E",
+            "energy_change_db": -0.27,
+            "low_change_db": -11.09,
+            "kind": "breakdown"
+          },
+          {
+            "at_s": 130.46,
+            "from_label": "E",
+            "to_label": "B",
+            "energy_change_db": 0.49,
+            "low_change_db": 9.96,
+            "kind": "bass returns"
+          },
+          {
+            "at_s": 182.37,
+            "from_label": "C",
+            "to_label": "A",
+            "energy_change_db": -3.48,
+            "low_change_db": 1.82,
+            "kind": "drop"
+          }
+        ],
+        "notes": [],
+        "timeline": [
+          {
+            "label": "A",
+            "start_s": 0.0,
+            "duration_s": 7.2,
+            "energy_db": -22.91,
+            "low_energy_db": -10.96
+          },
+          {
+            "label": "B",
+            "start_s": 7.25,
+            "duration_s": 13.0,
+            "energy_db": -15.11,
+            "low_energy_db": -13.35
+          },
+          {
+            "label": "C",
+            "start_s": 20.21,
+            "duration_s": 12.2,
+            "energy_db": -16.0,
+            "low_energy_db": -11.66
+          },
+          {
+            "label": "B",
+            "start_s": 32.42,
+            "duration_s": 52.6,
+            "energy_db": -15.75,
+            "low_energy_db": -10.9
+          },
+          {
+            "label": "D",
+            "start_s": 85.06,
+            "duration_s": 5.7,
+            "energy_db": -15.7,
+            "low_energy_db": -10.42
+          },
+          {
+            "label": "B",
+            "start_s": 90.74,
+            "duration_s": 19.8,
+            "energy_db": -15.81,
+            "low_energy_db": -10.06
+          },
+          {
+            "label": "E",
+            "start_s": 110.57,
+            "duration_s": 19.9,
+            "energy_db": -16.08,
+            "low_energy_db": -21.15
+          },
+          {
+            "label": "B",
+            "start_s": 130.46,
+            "duration_s": 36.0,
+            "energy_db": -15.59,
+            "low_energy_db": -11.19
+          },
+          {
+            "label": "C",
+            "start_s": 166.47,
+            "duration_s": 15.9,
+            "energy_db": -16.31,
+            "low_energy_db": -10.67
+          },
+          {
+            "label": "A",
+            "start_s": 182.37,
+            "duration_s": 3.0,
+            "energy_db": -19.79,
+            "low_energy_db": -8.85
+          }
+        ]
+      },
+      "listening": {
+        "listeners": 1,
+        "preferred": "mastered_16"
+      },
+      "next_step": "needs 2 more"
+    },
+    {
+      "slug": "nani-ki-kahani",
+      "kind": "vocal-only",
+      "kind_reason": "stops between phrases (8.0% quiet)",
+      "duration_s": 144.3,
+      "percent": 50,
+      "stages": [
+        {
+          "key": "intake",
+          "label": "Raw material",
+          "state": "done",
+          "detail": "144s, 48 kHz, mono",
+          "blocker": ""
+        },
+        {
+          "key": "vocal",
+          "label": "Vocal production",
+          "state": "done",
+          "detail": "chain applied \u2014 loudness range 7.59 \u2192 4.6 LU",
+          "blocker": ""
+        },
+        {
+          "key": "backing",
+          "label": "Backing track",
+          "state": "blocked",
+          "detail": "there is no instrumental under this vocal",
+          "blocker": "A beat has to be written, bought or licensed. Nothing here can generate one, and a vocal without music is not a song."
+        },
+        {
+          "key": "master",
+          "label": "Master",
+          "state": "done",
+          "detail": "-16.2 LUFS @ -3.00 dBTP \u2192 Spotify delivers -14.2",
+          "blocker": ""
+        },
+        {
+          "key": "arrangement",
+          "label": "Arrangement",
+          "state": "todo",
+          "detail": "2.40 min, no breakdown",
+          "blocker": "producer arrange"
+        },
+        {
+          "key": "judged",
+          "label": "Judged by ear",
+          "state": "todo",
+          "detail": "nobody has listened",
+          "blocker": "producer blindtest"
+        }
+      ],
+      "measurements": {
+        "raw": {
+          "lufs": -21.56,
+          "true_peak_dbtp": 0.0,
+          "crest_factor_db": 21.62,
+          "lra": 7.59
+        },
+        "final": {
+          "lufs": -16.19,
+          "true_peak_dbtp": -3.0,
+          "crest_factor_db": 11.15,
+          "lra": 6.05
+        },
+        "final_file": "MASTER.wav"
+      },
+      "arrangement": {
+        "sections": 7,
+        "types": 4,
+        "transitions": [
+          {
+            "at_s": 16.68,
+            "from_label": "A",
+            "to_label": "B",
+            "energy_change_db": 8.81,
+            "low_change_db": -0.53,
+            "kind": "lift"
+          }
+        ],
+        "notes": [
+          "At 2.4 min this is about 6s short of a typical single (2.5-4.0 min). Another section, or a repeat of the strongest one, closes the gap.",
+          "After the intro the energy never moves more than 0.8 dB \u2014 every section from 0:16 to 1:25 sits at the same level. However good it sounds, that reads as one long idea.",
+          "No section pulls the low end out: every part sits within 1.9 dB of the same bass level, so nothing ever drops. Filtering the bass and kick for a bar or two before **C** returns (first at 0:24) is what makes its return land."
+        ],
+        "timeline": [
+          {
+            "label": "A",
+            "start_s": 0.0,
+            "duration_s": 16.7,
+            "energy_db": -24.72,
+            "low_energy_db": -6.85
+          },
+          {
+            "label": "B",
+            "start_s": 16.68,
+            "duration_s": 7.6,
+            "energy_db": -15.91,
+            "low_energy_db": -7.38
+          },
+          {
+            "label": "C",
+            "start_s": 24.29,
+            "duration_s": 10.0,
+            "energy_db": -15.47,
+            "low_energy_db": -7.82
+          },
+          {
+            "label": "C",
+            "start_s": 34.31,
+            "duration_s": 10.4,
+            "energy_db": -15.65,
+            "low_energy_db": -7.01
+          },
+          {
+            "label": "C",
+            "start_s": 44.75,
+            "duration_s": 19.9,
+            "energy_db": -15.08,
+            "low_energy_db": -5.88
+          },
+          {
+            "label": "D",
+            "start_s": 64.67,
+            "duration_s": 21.1,
+            "energy_db": -15.12,
+            "low_energy_db": -7.45
+          },
+          {
+            "label": "D",
+            "start_s": 85.81,
+            "duration_s": 57.2,
+            "energy_db": -16.0,
+            "low_energy_db": -7.41
+          }
+        ]
+      },
+      "listening": null,
+      "next_step": "A beat has to be written, bought or licensed. Nothing here can generate one, and a vocal without music is not a song."
+    },
+    {
+      "slug": "sector-79-60",
+      "kind": "full-mix",
+      "kind_reason": "plays continuously (0.4% quiet), sub at -33 dB",
+      "duration_s": 145.7,
+      "percent": 40,
+      "stages": [
+        {
+          "key": "intake",
+          "label": "Raw material",
+          "state": "done",
+          "detail": "146s, 48 kHz, mono",
+          "blocker": ""
+        },
+        {
+          "key": "backing",
+          "label": "Backing track",
+          "state": "done",
+          "detail": "arrived as a finished mix, vocal already over the beat",
+          "blocker": ""
+        },
+        {
+          "key": "master",
+          "label": "Master",
+          "state": "todo",
+          "detail": "not mastered",
+          "blocker": "producer deliver --lufs -16"
+        },
+        {
+          "key": "arrangement",
+          "label": "Arrangement",
+          "state": "todo",
+          "detail": "2.43 min, no breakdown",
+          "blocker": "producer arrange"
+        },
+        {
+          "key": "judged",
+          "label": "Judged by ear",
+          "state": "todo",
+          "detail": "nobody has listened",
+          "blocker": "producer blindtest"
+        }
+      ],
+      "measurements": {
+        "raw": {
+          "lufs": -22.72,
+          "true_peak_dbtp": -1.31,
+          "crest_factor_db": 21.57,
+          "lra": 3.47
+        },
+        "final": {
+          "lufs": -22.72,
+          "true_peak_dbtp": -1.31,
+          "crest_factor_db": 21.57,
+          "lra": 3.47
+        },
+        "final_file": "original.wav"
+      },
+      "arrangement": {
+        "sections": 11,
+        "types": 4,
+        "transitions": [
+          {
+            "at_s": 10.98,
+            "from_label": "A",
+            "to_label": "B",
+            "energy_change_db": 5.29,
+            "low_change_db": 1.23,
+            "kind": "lift"
+          }
+        ],
+        "notes": [
+          "At 2.4 min this is about 4s short of a typical single (2.5-4.0 min). Another section, or a repeat of the strongest one, closes the gap.",
+          "After the intro the energy never moves more than 3.5 dB \u2014 every section from 0:10 to 2:16 sits at the same level. However good it sounds, that reads as one long idea.",
+          "No section pulls the low end out: every part sits within 1.8 dB of the same bass level, so nothing ever drops. Filtering the bass and kick for a bar or two before **B** returns (first at 0:10) is what makes its return land."
+        ],
+        "timeline": [
+          {
+            "label": "A",
+            "start_s": 0.0,
+            "duration_s": 11.0,
+            "energy_db": -26.45,
+            "low_energy_db": -10.88
+          },
+          {
+            "label": "B",
+            "start_s": 10.98,
+            "duration_s": 4.2,
+            "energy_db": -21.16,
+            "low_energy_db": -9.65
+          },
+          {
+            "label": "C",
+            "start_s": 15.13,
+            "duration_s": 4.7,
+            "energy_db": -20.58,
+            "low_energy_db": -10.54
+          },
+          {
+            "label": "D",
+            "start_s": 19.87,
+            "duration_s": 30.7,
+            "energy_db": -21.79,
+            "low_energy_db": -10.9
+          },
+          {
+            "label": "B",
+            "start_s": 50.57,
+            "duration_s": 9.5,
+            "energy_db": -23.36,
+            "low_energy_db": -10.15
+          },
+          {
+            "label": "D",
+            "start_s": 60.12,
+            "duration_s": 18.6,
+            "energy_db": -22.83,
+            "low_energy_db": -10.99
+          },
+          {
+            "label": "B",
+            "start_s": 78.73,
+            "duration_s": 10.8,
+            "energy_db": -24.08,
+            "low_energy_db": -10.87
+          },
+          {
+            "label": "D",
+            "start_s": 89.51,
+            "duration_s": 17.4,
+            "energy_db": -23.32,
+            "low_energy_db": -11.48
+          },
+          {
+            "label": "B",
+            "start_s": 106.92,
+            "duration_s": 10.8,
+            "energy_db": -23.28,
+            "low_energy_db": -10.84
+          },
+          {
+            "label": "D",
+            "start_s": 117.72,
+            "duration_s": 18.7,
+            "energy_db": -22.97,
+            "low_energy_db": -11.1
+          },
+          {
+            "label": "B",
+            "start_s": 136.42,
+            "duration_s": 9.2,
+            "energy_db": -23.77,
+            "low_energy_db": -10.67
+          }
+        ]
+      },
+      "listening": null,
+      "next_step": "producer deliver --lufs -16"
+    }
+  ],
+  "stage_order": [
+    "intake",
+    "vocal",
+    "backing",
+    "master",
+    "arrangement",
+    "judged"
+  ]
+}

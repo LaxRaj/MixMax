@@ -23,6 +23,27 @@
     "standardized_path": "comparisons/iced-latte/original.wav"
   },
   {
+    "source_file": "vocals/Nani-ki-kahani.m4a",
+    "slug": "nani-ki-kahani",
+    "verdict": "ready",
+    "blockers": [],
+    "warnings": [],
+    "metrics": {
+      "duration_s": 144.3,
+      "sample_rate": 48000,
+      "channels": 1,
+      "peak_dbfs": -0.0,
+      "clipping_runs": 0,
+      "dc_offset": 0.0,
+      "noise_floor_dbfs": -45.78,
+      "snr_db": 45.78,
+      "leading_silence_s": 0.05,
+      "trailing_silence_s": 0.0,
+      "dual_mono": false
+    },
+    "standardized_path": "comparisons/nani-ki-kahani/original.wav"
+  },
+  {
     "source_file": "vocals/Sector 79 60.m4a",
     "slug": "sector-79-60",
     "verdict": "caution",

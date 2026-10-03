@@ -15,6 +15,14 @@ Upload: `comparisons/iced-latte/original.wav`
 - [ ] **producer** → `producer render` writes `comparisons/iced-latte/producer.wav`
 - [ ] _(optional)_ **reference** → drop one at `comparisons/iced-latte/reference.wav` to give this track its own tonal target
 
+## nani-ki-kahani
+
+Upload: `comparisons/nani-ki-kahani/original.wav`
+
+- [ ] **landr** → save as `comparisons/nani-ki-kahani/landr.wav`
+- [ ] **producer** → `producer render` writes `comparisons/nani-ki-kahani/producer.wav`
+- [ ] _(optional)_ **reference** → drop one at `comparisons/nani-ki-kahani/reference.wav` to give this track its own tonal target
+
 ## sector-79-60
 
 Upload: `comparisons/sector-79-60/original.wav`

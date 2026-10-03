@@ -1,10 +1,11 @@
 # Intake report
 
-**2 file(s): 0 ready, 2 usable with caveats, 0 blocked.**
+**3 file(s): 1 ready, 2 usable with caveats, 0 blocked.**
 
 | File | Verdict | Length | Rate | Ch | Peak | Noise floor | SNR |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `Iced Latte.m4a` | ⚠️ caution | 117.52s | 48.0k | 1 | -4.88 dB | -37.68 dB | 32.8 dB |
+| `Nani-ki-kahani.m4a` | ✅ ready | 144.3s | 48.0k | 1 | -0.0 dB | -45.78 dB | 45.78 dB |
 | `Sector 79 60.m4a` | ⚠️ caution | 145.68s | 48.0k | 1 | -1.31 dB | -36.47 dB | 35.16 dB |
 ## ⚠️ Worth knowing before you spend credits
 

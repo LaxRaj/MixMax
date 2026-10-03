@@ -41,6 +41,7 @@ from producer.arrange import (
     plan_extension,
     render_arrangement,
 )
+from producer.progress import build_comparison
 from producer.structure import analyze_structure, build_structure_report
 from producer.master_chain import DEFAULT_MASTER_PARAMS, master_full_mix
 from producer.loudness import normalize_to_target
@@ -900,3 +901,33 @@ def arrange(
     click.secho(
         "Built entirely from the source. A bridge made of existing material is a "
         "real technique, not a new part written for the song.", fg="yellow")
+
+
+@cli.command()
+@click.option("--workspace", required=True, type=IN_DIR, help="Workspace created by `intake`.")
+@click.option("--out", "out_path", type=OUT_FILE, default="web/public/compare.json",
+              show_default=True, help="Where the comparison view reads its data.")
+def compare(workspace: Path, out_path: Path) -> None:
+    """How finished each track is, and what is actually stopping it.
+
+    A compliant master of a bare vocal is still a bare vocal, so this reports
+    completion rather than conformance.
+    """
+    data = build_comparison(workspace)
+    if not data["tracks"]:
+        raise click.ClickException(f"No tracks in {workspace}. Run `producer intake` first.")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(data, indent=2) + "\n")
+
+    colours = {"done": "green", "partial": "yellow", "blocked": "red", "todo": "white"}
+    for track in data["tracks"]:
+        click.echo(f"\n{track['slug']}  —  {track['percent']}%  "
+                   f"({track['kind']}, {track['duration_s'] / 60:.2f} min)")
+        for stage in track["stages"]:
+            mark = {"done": "✓", "partial": "~", "blocked": "✗", "todo": "·"}[stage["state"]]
+            click.secho(f"   {mark} {stage['label']:<18} {stage['detail']}",
+                        fg=colours[stage["state"]])
+        click.echo(f"   next: {track['next_step']}")
+
+    click.echo(f"\nComparison -> {out_path}")

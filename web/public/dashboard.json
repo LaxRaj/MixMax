@@ -3,22 +3,22 @@
     {
       "key": "intake",
       "label": "Intake",
-      "done": 2,
-      "total": 2,
+      "done": 3,
+      "total": 3,
       "blurb": "Raw vocals validated and standardised."
     },
     {
       "key": "render",
       "label": "Our master",
       "done": 0,
-      "total": 2,
+      "total": 3,
       "blurb": "Mix chain, then reference-based mastering."
     },
     {
       "key": "benchmark",
       "label": "Benchmarked",
-      "done": 1,
-      "total": 2,
+      "done": 2,
+      "total": 3,
       "blurb": "A commercial master to compare against."
     },
     {
@@ -44,6 +44,20 @@
         "MASTER",
         "MASTER_extended",
         "extended"
+      ]
+    },
+    {
+      "slug": "nani-ki-kahani",
+      "versions": [
+        "MASTER",
+        "original",
+        "vocal_mixed"
+      ],
+      "has_ours": false,
+      "has_reference": false,
+      "competitors": [
+        "MASTER",
+        "vocal_mixed"
       ]
     },
     {
