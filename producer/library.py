@@ -149,8 +149,10 @@ def analyze_reference(
     mono = np.ascontiguousarray(track.mono(), dtype=np.float32)
     window = mono[: int(ANALYSIS_SECONDS * track.sample_rate)]
 
+    from producer.analysis import fold_tempo
+
     tempo, _ = librosa.beat.beat_track(y=window, sr=track.sample_rate)
-    tempo_bpm = float(np.atleast_1d(tempo)[0])
+    tempo_bpm = fold_tempo(float(np.atleast_1d(tempo)[0]))
 
     return LibraryEntry(
         path=str(path.resolve()),

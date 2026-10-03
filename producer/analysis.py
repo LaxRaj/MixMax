@@ -34,10 +34,31 @@ def _finite(value: float, fallback: float = 0.0) -> float:
     return value if np.isfinite(value) else fallback
 
 
+# Beat trackers routinely land an octave out — 99 BPM reported as 199. Folding
+# into a musical range fixes the common case without flattening genres that
+# genuinely live fast; 65-185 covers everything from slow soul to drill.
+TEMPO_FOLD_RANGE = (65.0, 185.0)
+
+
+def fold_tempo(bpm: float) -> float:
+    """Halve or double a tempo into the range music is normally counted in."""
+    low, high = TEMPO_FOLD_RANGE
+    if not np.isfinite(bpm) or bpm <= 0:
+        return 0.0
+    for _ in range(4):
+        if bpm > high:
+            bpm /= 2.0
+        elif bpm < low:
+            bpm *= 2.0
+        else:
+            break
+    return float(bpm)
+
+
 def _tempo(y: np.ndarray, sr: int) -> float:
     tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
     # librosa may hand back a 0-d or 1-element array depending on version.
-    return _finite(np.atleast_1d(tempo)[0])
+    return fold_tempo(_finite(np.atleast_1d(tempo)[0]))
 
 
 def _pitch_range(y: np.ndarray, sr: int) -> tuple[float, float]:

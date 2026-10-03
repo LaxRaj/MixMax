@@ -108,6 +108,71 @@ def find_offset(vocal: str | Path, beat: str | Path) -> Alignment:
     return Alignment(float(lags[peak]) / rate, round(confidence, 3), "onset correlation")
 
 
+# Grid alignment searches within half a bar either way. Beyond that the answer
+# is a musical choice (which bar the verse starts on), not a measurement.
+GRID_SEARCH_BARS = 0.5
+GRID_STEP_S = 0.005
+GRID_SUBDIVISION = 4          # sixteenths
+MIN_GRID_PERIODICITY = 0.3
+
+
+def align_to_grid(vocal: str | Path, beat: str | Path) -> Alignment:
+    """Lock the vocal to the beat's own grid.
+
+    Correlating two onset envelopes fails when both are periodic. But a beat
+    with drums has a grid that *is* measurable, and a vocal recorded over it
+    puts its syllables on that grid. So this scores candidate offsets by how
+    closely the vocal's onsets land on the beat's subdivisions.
+
+    It searches half a bar either way. Which *bar* a verse starts on is an
+    arrangement decision; where it sits inside the bar is a measurement.
+    """
+    beat_path, vocal_path = Path(beat), Path(vocal)
+    beat_y, sr = librosa.load(str(beat_path), sr=22050, mono=True)
+    onset_env = librosa.onset.onset_strength(y=beat_y, sr=sr)
+    tempo, beats = librosa.beat.beat_track(onset_envelope=onset_env, sr=sr)
+    tempo = float(np.atleast_1d(tempo)[0])
+
+    # Only trust this when the beat really has a pulse.
+    centred = onset_env - onset_env.mean()
+    auto = librosa.autocorrelate(centred, max_size=int(4 * sr / 512))
+    auto = auto / (auto[0] + 1e-9)
+    lag = int(round((60.0 / tempo) * sr / 512)) if tempo > 0 else 0
+    periodicity = float(auto[lag]) if 0 < lag < len(auto) else 0.0
+    if periodicity < MIN_GRID_PERIODICITY or len(beats) < 8:
+        return Alignment(0.0, 0.0, f"beat has no usable grid (periodicity {periodicity:.2f})")
+
+    grid_times = librosa.frames_to_time(beats, sr=sr)
+    step = float(np.median(np.diff(grid_times))) / GRID_SUBDIVISION
+    fine = np.arange(grid_times[0], grid_times[-1], step)
+
+    vocal_y, vsr = librosa.load(str(vocal_path), sr=22050, mono=True)
+    onsets = librosa.onset.onset_detect(y=vocal_y, sr=vsr, units="time")
+    if onsets.size < 16:
+        return Alignment(0.0, 0.0, "not enough vocal onsets to place")
+
+    span = GRID_SEARCH_BARS * (60.0 / tempo) * 4.0
+    candidates = np.arange(-span, span + GRID_STEP_S, GRID_STEP_S)
+    scores = np.empty_like(candidates)
+    for i, candidate in enumerate(candidates):
+        shifted = onsets + candidate
+        inside = shifted[(shifted >= fine[0]) & (shifted <= fine[-1])]
+        if inside.size == 0:
+            scores[i] = 1.0
+            continue
+        nearest = np.abs(inside[:, None] - fine[None, :]).min(axis=1)
+        scores[i] = float(np.mean(nearest)) / step   # 0 = dead on, 0.5 = worst
+
+    best = int(np.argmin(scores))
+    # Confidence: how much tighter the best fit is than the average candidate.
+    confidence = float(np.clip((np.mean(scores) - scores[best]) / (np.mean(scores) + 1e-9) * 3.0,
+                               0.0, 1.0))
+    return Alignment(
+        round(float(candidates[best]), 4), round(confidence, 3),
+        f"grid lock at {tempo:.1f} BPM (periodicity {periodicity:.2f})",
+    )
+
+
 def _as_stereo(samples: np.ndarray) -> np.ndarray:
     if samples.ndim == 1:
         return np.stack([samples, samples], axis=1).astype(np.float32)
@@ -175,7 +240,9 @@ def combine(
     if offset_s is not None:
         alignment = Alignment(float(offset_s), 1.0, "given")
     else:
-        detected = find_offset(vocal, beat)
+        detected = align_to_grid(vocal, beat)
+        if not detected.trustworthy:
+            detected = find_offset(vocal, beat)
         if detected.trustworthy:
             alignment = detected
         else:

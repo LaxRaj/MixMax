@@ -99,7 +99,9 @@ def _features(y: np.ndarray, sr: int) -> tuple[np.ndarray, np.ndarray, np.ndarra
         librosa.util.sync(chroma, beats, aggregate=np.median),
         librosa.util.sync(mfcc, beats, aggregate=np.mean),
     ])
-    return np.atleast_1d(tempo)[0], beats, librosa.util.normalize(sync, axis=0)
+    from producer.analysis import fold_tempo
+
+    return fold_tempo(float(np.atleast_1d(tempo)[0])), beats, librosa.util.normalize(sync, axis=0)
 
 
 def _label_sections(features: np.ndarray, bounds: list[int], count: int) -> list[str]:

@@ -44,6 +44,7 @@ from producer.arrange import (
 from producer.combine import (
     DEFAULT_DUCK_DB,
     DEFAULT_VOCAL_OVER_BEAT_DB,
+    align_to_grid,
     combine,
     find_offset,
 )
@@ -964,7 +965,10 @@ def combine_cmd(
     the words so the vocal stays intelligible.
     """
     if check_alignment:
-        alignment = find_offset(vocal, beat)
+        alignment = align_to_grid(vocal, beat)
+        if not alignment.trustworthy:
+            click.echo(f"grid: {alignment.method} (confidence {alignment.confidence:.2f})")
+            alignment = find_offset(vocal, beat)
         click.echo(f"Offset {alignment.offset_s:+.3f}s via {alignment.method} "
                    f"(confidence {alignment.confidence:.2f})")
         if not alignment.trustworthy:

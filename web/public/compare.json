@@ -179,8 +179,8 @@
       "slug": "nani-ki-kahani",
       "kind": "vocal-only",
       "kind_reason": "stops between phrases (8.0% quiet)",
-      "duration_s": 144.3,
-      "percent": 50,
+      "duration_s": 147.2,
+      "percent": 67,
       "stages": [
         {
           "key": "intake",
@@ -199,22 +199,22 @@
         {
           "key": "backing",
           "label": "Backing track",
-          "state": "blocked",
-          "detail": "there is no instrumental under this vocal",
-          "blocker": "A beat has to be written, bought or licensed. Nothing here can generate one, and a vocal without music is not a song."
+          "state": "done",
+          "detail": "vocal mixed over beat.wav",
+          "blocker": ""
         },
         {
           "key": "master",
           "label": "Master",
           "state": "done",
-          "detail": "-16.2 LUFS @ -3.00 dBTP \u2192 Spotify delivers -14.2",
+          "detail": "-16.1 LUFS @ -3.00 dBTP \u2192 Spotify delivers -14.1",
           "blocker": ""
         },
         {
           "key": "arrangement",
           "label": "Arrangement",
           "state": "todo",
-          "detail": "2.40 min, no breakdown",
+          "detail": "2.45 min, no breakdown",
           "blocker": "producer arrange"
         },
         {
@@ -233,85 +233,120 @@
           "lra": 7.59
         },
         "final": {
-          "lufs": -16.19,
+          "lufs": -16.13,
           "true_peak_dbtp": -3.0,
-          "crest_factor_db": 11.15,
-          "lra": 6.05
+          "crest_factor_db": 15.06,
+          "lra": 6.17
         },
         "final_file": "MASTER.wav"
       },
       "arrangement": {
-        "sections": 7,
-        "types": 4,
+        "sections": 10,
+        "types": 5,
         "transitions": [
           {
-            "at_s": 16.68,
+            "at_s": 19.08,
             "from_label": "A",
             "to_label": "B",
-            "energy_change_db": 8.81,
-            "low_change_db": -0.53,
+            "energy_change_db": 6.01,
+            "low_change_db": -0.52,
             "kind": "lift"
+          },
+          {
+            "at_s": 136.09,
+            "from_label": "B",
+            "to_label": "A",
+            "energy_change_db": -4.18,
+            "low_change_db": -3.47,
+            "kind": "drop"
+          },
+          {
+            "at_s": 144.53,
+            "from_label": "A",
+            "to_label": "E",
+            "energy_change_db": -18.5,
+            "low_change_db": -32.54,
+            "kind": "drop"
           }
         ],
         "notes": [
-          "At 2.4 min this is about 6s short of a typical single (2.5-4.0 min). Another section, or a repeat of the strongest one, closes the gap.",
-          "After the intro the energy never moves more than 0.8 dB \u2014 every section from 0:16 to 1:25 sits at the same level. However good it sounds, that reads as one long idea.",
-          "No section pulls the low end out: every part sits within 1.9 dB of the same bass level, so nothing ever drops. Filtering the bass and kick for a bar or two before **C** returns (first at 0:24) is what makes its return land."
+          "At 2.5 min this is about 3s short of a typical single (2.5-4.0 min). Another section, or a repeat of the strongest one, closes the gap."
         ],
         "timeline": [
           {
             "label": "A",
             "start_s": 0.0,
-            "duration_s": 16.7,
-            "energy_db": -24.72,
-            "low_energy_db": -6.85
+            "duration_s": 19.1,
+            "energy_db": -23.5,
+            "low_energy_db": -4.56
           },
           {
             "label": "B",
-            "start_s": 16.68,
-            "duration_s": 7.6,
-            "energy_db": -15.91,
-            "low_energy_db": -7.38
+            "start_s": 19.08,
+            "duration_s": 25.5,
+            "energy_db": -17.49,
+            "low_energy_db": -5.08
+          },
+          {
+            "label": "B",
+            "start_s": 44.59,
+            "duration_s": 11.8,
+            "energy_db": -17.21,
+            "low_energy_db": -4.15
           },
           {
             "label": "C",
-            "start_s": 24.29,
-            "duration_s": 10.0,
-            "energy_db": -15.47,
-            "low_energy_db": -7.82
+            "start_s": 56.42,
+            "duration_s": 8.0,
+            "energy_db": -17.69,
+            "low_energy_db": -6.04
           },
           {
-            "label": "C",
-            "start_s": 34.31,
-            "duration_s": 10.4,
-            "energy_db": -15.65,
-            "low_energy_db": -7.01
+            "label": "B",
+            "start_s": 64.39,
+            "duration_s": 15.3,
+            "energy_db": -17.4,
+            "low_energy_db": -5.1
           },
           {
-            "label": "C",
-            "start_s": 44.75,
-            "duration_s": 19.9,
-            "energy_db": -15.08,
-            "low_energy_db": -5.88
+            "label": "B",
+            "start_s": 79.69,
+            "duration_s": 25.5,
+            "energy_db": -17.76,
+            "low_energy_db": -4.76
           },
           {
             "label": "D",
-            "start_s": 64.67,
-            "duration_s": 21.1,
-            "energy_db": -15.12,
-            "low_energy_db": -7.45
+            "start_s": 105.17,
+            "duration_s": 8.7,
+            "energy_db": -19.28,
+            "low_energy_db": -7.13
           },
           {
-            "label": "D",
-            "start_s": 85.81,
-            "duration_s": 57.2,
-            "energy_db": -16.0,
-            "low_energy_db": -7.41
+            "label": "B",
+            "start_s": 113.88,
+            "duration_s": 22.2,
+            "energy_db": -17.91,
+            "low_energy_db": -4.45
+          },
+          {
+            "label": "A",
+            "start_s": 136.09,
+            "duration_s": 8.4,
+            "energy_db": -22.09,
+            "low_energy_db": -7.92
+          },
+          {
+            "label": "E",
+            "start_s": 144.53,
+            "duration_s": 2.7,
+            "energy_db": -40.59,
+            "low_energy_db": -40.46
           }
         ]
       },
       "listening": null,
-      "next_step": "A beat has to be written, bought or licensed. Nothing here can generate one, and a vocal without music is not a song."
+      "next_step": "producer arrange"
     },
     {
       "slug": "sector-79-60",

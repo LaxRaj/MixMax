@@ -218,3 +218,41 @@ def test_low_confidence_is_warned_about_in_the_cli(rig: dict) -> None:
 
 def test_confidence_floor_is_strict_enough_to_matter() -> None:
     assert ALIGNMENT_CONFIDENCE_FLOOR >= 0.3
+
+
+# ── grid alignment ───────────────────────────────────────────────────────
+
+
+def test_grid_alignment_needs_a_beat_with_a_pulse(tmp_path: Path, rig: dict) -> None:
+    """Without drums there is no grid, and the method must say so."""
+    from producer.combine import align_to_grid
+
+    pulseless = tmp_path / "pad.wav"
+    t = np.linspace(0, 40, SR * 40, endpoint=False)
+    sf.write(str(pulseless), (0.3 * np.sin(2 * np.pi * 110 * t)).astype(np.float32), SR)
+
+    alignment = align_to_grid(rig["vocal"], pulseless)
+    assert not alignment.trustworthy
+    assert "no usable grid" in alignment.method or "onsets" in alignment.method
+
+
+def test_grid_alignment_reports_the_tempo_it_locked_to(rig: dict) -> None:
+    from producer.combine import align_to_grid
+
+    alignment = align_to_grid(rig["vocal"], rig["beat"])
+    assert 0.0 <= alignment.confidence <= 1.0
+    # Whatever it concludes, it must stay inside the half-bar it searched.
+    assert abs(alignment.offset_s) <= 60.0 / BPM * 4.0 * 0.5 + 0.01
+
+
+def test_dense_onsets_against_a_fine_grid_are_not_claimed_as_confident(rig: dict) -> None:
+    """A fast vocal fits almost any offset against sixteenths.
+
+    That ambiguity is real, and reporting it as a lock would move the take on
+    a coin flip.
+    """
+    from producer.combine import align_to_grid
+
+    alignment = align_to_grid(rig["vocal"], rig["beat"])
+    if alignment.confidence < 0.35:
+        assert not alignment.trustworthy
