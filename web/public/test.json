@@ -1,10 +1,17 @@
 {
   "slug": "demo-local",
-  "labels": ["A", "B", "C"],
+  "labels": [
+    "A",
+    "B",
+    "C"
+  ],
   "urls": {
     "A": "/audio/A.m4a",
     "B": "/audio/B.m4a",
     "C": "/audio/C.m4a"
   },
-  "excerpt": { "start_s": 0, "length_s": 20 }
+  "excerpt": {
+    "start_s": 0,
+    "length_s": 60
+  }
 }

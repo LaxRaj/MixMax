@@ -4,7 +4,7 @@
 
 - **Success metric:** `producer batch` runs against 3–5 real vocal files from friends and produces a `report.md` with automated QA results, plus your own subjective "does this sound release-ready" verdict per file.
 - **Deadline:** ~1 week out (assumption — 6 milestones, each ≤1 day; adjust if wrong).
-- **Status:** M0–M7 built, 93 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: reference tracks** — `producer render` needs one per track, or a fallback.
+- **Status:** M0–M7 built plus chain fitting, 105 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: reference tracks** — `producer render` needs one per track, or a fallback.
 - **Repo:** `~/Desktop/projects/MixMax` — https://github.com/LaxRaj/MixMax
 
 ## Non-goals
@@ -264,3 +264,6 @@
 2026-10-02 — References resolve per track (`<slug>/reference.*`) with `--reference` as fallback. — Vocals span genres; one tonal target for a ballad and a rap hook masters at least one of them wrong.
 2026-10-02 — `reference` is a reserved stem, excluded from version discovery. — It lives in the song folder but is a different song; left discoverable it would be benchmarked as a master and, worse, land in the blind test for friends to score.
 2026-10-02 — `render` resolves every reference before rendering any track. — A mid-run failure leaves a workspace where some `producer.wav` files are current and others are stale, which silently corrupts the next benchmark.
+2026-10-03 — `producer tune` fits the chain to a measured target, and says so loudly. — "Train the producer" has an honest reading (close the measured gap to a master you trust) and a dishonest one (have software judge what sounds good); only the first is buildable, so every output repeats that a smaller distance is a lead, not a verdict.
+2026-10-03 — The tuning distance excludes loudness. — Matchering sets loudness from the reference, so scoring it would optimise for the reference choice rather than the chain.
+2026-10-03 — Chain parameters moved into `ChainParams` with the shipped values as defaults. — Tuning needs a search space, and a test pins the defaults so the refactor cannot silently change what everyone has been listening to.

@@ -246,15 +246,53 @@ producer tally --key blind/my_song.key.json --responses responses/ --out results
 With fewer than three listeners the report labels itself an anecdote rather
 than a verdict.
 
+### `producer tune --vocal PATH --reference PATH --target PATH [--budget N]`
+
+Fits the mix chain to a target master you already trust — LANDR's version of
+the *same* vocal, or a commercial track — by searching the nine chain
+parameters for the settings that minimise measured distance.
+
+```bash
+producer tune \
+  --vocal comparisons/ballad/original.wav \
+  --reference references/soul.wav \
+  --target comparisons/ballad/landr.wav \
+  --out chain_params.json --budget 60
+```
+
+```
+Distance  13.924 -> 12.183 (+12.5%)
+  * deess_gain_db           -8.61   (was -4.00)
+  * reverb_wet               0.00   (was 0.08)
+  ...
+```
+
+Then `producer mix --params chain_params.json`.
+
+**This does not learn what sounds good — nothing here listens.** The distance
+is a weighted sum of spectral-balance, crest-factor, loudness-range and
+centroid differences. Loudness is deliberately excluded, since matchering sets
+it from the reference and scoring it would just measure your reference choice.
+
+A smaller distance is a lead worth testing, not proof of a better master. The
+blind listening test is still the only thing that settles it.
+
 ## Tests
 
 ```bash
-pytest -q
+pytest -q              # 105 tests, pipeline
+cd web && npm run e2e  # 16 tests, listening test app in a real browser
 ```
 
-The suite runs entirely on synthetic fixtures generated at test-setup time — no
-real audio required. The fixtures are also committed so the quickstart above
-works from a clean clone.
+The Python suite runs entirely on synthetic fixtures generated at test-setup
+time — no real audio required. The fixtures are also committed so the
+quickstart above works from a clean clone.
+
+The browser suite drives the real app in Chromium at both desktop and phone
+viewports, asserting the guarantees that matter: the page hydrates, every
+version decodes and plays at once, switching does not restart a source or lose
+position, nothing in the DOM or network traffic reveals which version is which,
+and the exported CSV matches the schema `producer tally` reads.
 
 ## The testing loop
 

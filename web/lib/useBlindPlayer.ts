@@ -71,6 +71,11 @@ export function useBlindPlayer(manifest: Manifest): BlindPlayer {
 
   const ensureContext = useCallback(() => {
     if (!ctxRef.current) {
+      // iOS silences Web Audio when the hardware ring/silent switch is on,
+      // unless the page declares a playback session. Safari 16.4+.
+      const nav = navigator as Navigator & { audioSession?: { type: string } };
+      if (nav.audioSession) nav.audioSession.type = "playback";
+
       const Ctor =
         window.AudioContext ??
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;

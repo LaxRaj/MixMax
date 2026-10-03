@@ -22,8 +22,9 @@ from producer.workspace import (
 )
 from producer.audio import human_size
 from producer.mastering import master_track
-from producer.mix import mix_vocal
+from producer.mix import ChainParams, DEFAULT_PARAMS, mix_vocal
 from producer.qa import run_qa
+from producer.tune import tune_chain
 from producer.report_plot import plot_comparison
 
 EXISTING_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
@@ -78,9 +79,11 @@ def analyze(vocal: Path, out_path: Path | None) -> None:
 @cli.command()
 @click.option("--vocal", required=True, type=EXISTING_FILE, help="Vocal to mix.")
 @click.option("--out", "out_path", required=True, type=OUT_FILE, help="Destination WAV.")
-def mix(vocal: Path, out_path: Path) -> None:
+@click.option("--params", "params_path", type=EXISTING_FILE, help="Chain settings from `producer tune`.")
+def mix(vocal: Path, out_path: Path, params_path: Path | None) -> None:
     """Run VOCAL through the vocal mix chain and write it to OUT."""
-    result = mix_vocal(vocal, out_path)
+    params = ChainParams.load(params_path) if params_path else DEFAULT_PARAMS
+    result = mix_vocal(vocal, out_path, params)
     click.echo(f"Mixed -> {result} ({human_size(result.stat().st_size)})")
 
 
@@ -263,3 +266,51 @@ def render(workspace: Path, reference: Path | None, no_premix: bool, dry_run: bo
         click.echo(f"          reference: {Path(result['reference']).name} ({result['reference_source']})")
         for flag in result["qa"]["flags"]:
             click.echo(f"          {flag}")
+
+
+@cli.command()
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="Raw vocal to fit against.")
+@click.option("--reference", required=True, type=EXISTING_FILE, help="Reference we master to.")
+@click.option("--target", required=True, type=EXISTING_FILE,
+              help="Master to approach — e.g. LANDR's version of this same vocal.")
+@click.option("--out", "out_path", type=OUT_FILE, default="chain_params.json", show_default=True,
+              help="Where the fitted settings are written.")
+@click.option("--budget", default=60, show_default=True, help="How many renders to try.")
+@click.option("--seed", default=0, show_default=True, help="Seed, for a reproducible search.")
+def tune(vocal: Path, reference: Path, target: Path, out_path: Path, budget: int, seed: int) -> None:
+    """Fit the mix chain to a TARGET master, by measurement.
+
+    This optimises measurable similarity. Nothing here listens, so a smaller
+    distance is a lead to test, not proof of a better-sounding master.
+    """
+    click.echo(f"Fitting {vocal.name} toward {target.name} over {budget} renders…")
+
+    with click.progressbar(length=budget + 1, label="  searching") as bar:
+        last = {"n": 0}
+
+        def on_step(n: int, _loss: float, _best: float) -> None:
+            bar.update(n - last["n"])
+            last["n"] = n
+
+        result = tune_chain(vocal, reference, target, budget=budget, seed=seed, on_step=on_step)
+
+    result.params.save(out_path)
+
+    click.echo(f"Distance  {result.baseline_loss:.3f} -> {result.loss:.3f} "
+               f"({result.improvement * 100:+.1f}%)")
+    for name, value in result.params.to_dict().items():
+        default = getattr(DEFAULT_PARAMS, name)
+        marker = " " if abs(value - default) < 1e-6 else "*"
+        click.echo(f"  {marker} {name:20} {value:>8.2f}   (was {default:.2f})")
+    click.echo(f"Settings -> {out_path}")
+
+    if result.improvement <= 0.01:
+        click.secho(
+            "Barely moved. The mastering stage sets most of the tone, so the mix "
+            "chain may have little room here — try a different reference instead.",
+            fg="yellow",
+        )
+    click.secho(
+        "Measured similarity only. Put it through a blind test before trusting it.",
+        fg="yellow",
+    )

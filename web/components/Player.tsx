@@ -48,6 +48,7 @@ export function Player({ player, labels }: { player: BlindPlayer; labels: string
               data-active={label === active}
               role="radio"
               aria-checked={label === active}
+              aria-label={`Version ${label}`}
               onClick={() => player.select(label)}
             >
               <span className={styles.lamp} aria-hidden />

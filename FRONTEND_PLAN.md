@@ -3,7 +3,7 @@
 > A hosted, blind, loudness-matched listening test friends can open on a phone — built to fix the one step that currently has the worst completion rate: getting real people to actually give feedback.
 
 - **Success metric:** 5+ friends complete a blind test from a shared link without a single follow-up message from you, and `producer tally` reads their responses with no manual CSV wrangling.
-- **Status:** F0 built and verified on desktop Chrome. Gapless switching confirmed by assertion, not by eye. Outstanding: real-device testing on iOS Safari and Android.
+- **Status:** F0 built, with a 16-test Playwright suite (desktop + phone viewport) asserting every guarantee. Outstanding: real-device testing on an actual iOS Safari / Android handset — emulated viewports do not test the engine or the memory ceiling.
 - **Repo:** `~/Desktop/projects/MixMax` — https://github.com/LaxRaj/MixMax
 - **Depends on:** `producer blindtest` (built, M6). This is a delivery layer over it, not a replacement.
 
@@ -87,7 +87,7 @@ producer tally      ->  pull responses, un-blind locally, aggregate
   ```
 - **Acceptance criteria:**
   - [x] Switching between versions mid-playback is inaudible as a transition and preserves position exactly — asserted in-browser: source objects unchanged across the switch, shared start time unchanged, gains flip 1→0/0→1, clock reads 0:02 before and after
-  - [x] Desktop Chrome
+  - [x] Desktop Chrome, plus an automated Playwright suite covering both viewports
   - [ ] Desktop Safari, iOS Safari, one mid-range Android — **not tested**, no device access here
   - [ ] Three 60s versions load and play without a crash on a phone — **not tested on a phone**; 3×20s verified on desktop
   - [x] Page source and network tab reveal no source names — only labels (`assertBlind` enforces it at load)
@@ -189,3 +189,5 @@ producer tally      ->  pull responses, un-blind locally, aggregate
 2026-10-03 — Ranking uses arrow controls, not drag-and-drop as the plan's prompt specified. — The HTML5 drag API does not fire on touch, and phones are the primary target; arrows also give keyboard and screen-reader users the same affordance.
 2026-10-03 — No spectrum or level visualisation anywhere in the player. — Any per-version visual difference lets a listener rank by looking instead of listening, which would quietly void the blind test.
 2026-10-03 — Position is tracked only while playing. — A suspended AudioContext's `currentTime` is unrelated to playback position; reading it idle displayed load time as position.
+2026-10-03 — Added a Playwright suite that drives the real app, rather than an LLM agent clicking through it. — The guarantees here are mechanical (same source objects across a switch, no source name in the DOM); a deterministic assertion proves them, where an agent's impression cannot.
+2026-10-03 — No agent scores the listening test. — An agent cannot hear. Invented scores would feed `producer tune` and optimise the chain toward noise, corrupting the one measurement the project depends on.
