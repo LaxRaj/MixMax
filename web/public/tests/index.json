@@ -1,0 +1,18 @@
+{
+  "tests": [
+    {
+      "slug": "nani-balance",
+      "title": "Nani-ki-kahani \u2014 how loud should the vocal sit?",
+      "blurb": "Three balances between the vocal and the beat. Same performance, same beat.",
+      "labels": 3,
+      "length_s": 50.0
+    },
+    {
+      "slug": "iced-bridge",
+      "title": "Iced Latte \u2014 how deep should the breakdown go?",
+      "blurb": "Three depths for the filter on the breakdown, into the drop.",
+      "labels": 3,
+      "length_s": 50.0
+    }
+  ]
+}

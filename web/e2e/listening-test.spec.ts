@@ -9,6 +9,7 @@ import {
   useManifest,
   FIXTURE_MANIFEST,
   SINGLE_MANIFEST,
+  useTestIndex,
 } from "./helpers";
 
 test.describe("blind listening test", () => {
@@ -81,7 +82,9 @@ test.describe("blind listening test", () => {
     await page.waitForTimeout(500);
 
     const dom = (await page.content()).toLowerCase();
-    const manifest = await page.evaluate(() => fetch("/test.json").then((r) => r.text()));
+    const manifest = await page.evaluate(() =>
+      fetch("/tests/e2e-fixture.json").then((r) => r.text()),
+    );
 
     for (const name of SOURCE_NAMES) {
       expect(manifest.toLowerCase(), `manifest leaks "${name}"`).not.toContain(name);
@@ -193,5 +196,47 @@ test.describe("single version", () => {
     });
     expect(csv.trim().split("\n")).toHaveLength(2);
     expect(csv).toContain("Lakshya,A,4,1");
+  });
+});
+
+
+test.describe("several tests published at once", () => {
+  const PUBLISHED = [
+    { slug: "one", title: "First song — how loud is the vocal?", blurb: "Three balances.", labels: 3, length_s: 50 },
+    { slug: "two", title: "Second song — how deep is the breakdown?", blurb: "Three depths.", labels: 3, length_s: 50 },
+  ];
+
+  test("offers a choice rather than guessing", async ({ page }) => {
+    await useTestIndex(page, PUBLISHED);
+    await page.goto("/");
+
+    await expect(page.getByRole("heading", { name: /two things to listen to/i })).toBeVisible();
+    for (const test of PUBLISHED) {
+      await expect(page.getByRole("link", { name: new RegExp(test.title, "i") })).toBeVisible();
+    }
+  });
+
+  test("each choice links to its own test", async ({ page }) => {
+    await useTestIndex(page, PUBLISHED);
+    await page.goto("/");
+
+    const first = page.getByRole("link").first();
+    await expect(first).toHaveAttribute("href", "/?test=one");
+  });
+
+  test("a named test loads straight into the player", async ({ page }) => {
+    await useManifest(page, { ...FIXTURE_MANIFEST, slug: "one", title: "First song" });
+    await page.goto("/?test=one");
+
+    await expect(page.getByRole("heading", { name: /first song/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /load the audio/i })).toBeVisible();
+  });
+
+  test("an unknown test says so instead of hanging", async ({ page }) => {
+    await page.route("**/tests/*.json", (route) => route.fulfill({ status: 404, body: "" }));
+    await page.goto("/?test=nope");
+
+    await expect(page.getByRole("heading", { name: /nothing to listen to/i })).toBeVisible();
+    await expect(page.getByText(/nope/)).toBeVisible();
   });
 });

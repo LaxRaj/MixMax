@@ -3,6 +3,7 @@ export type Excerpt = { start_s: number; length_s: number };
 export type Manifest = {
   slug: string;
   title?: string;
+  blurb?: string;
   labels: string[];
   urls: Record<string, string>;
   excerpt?: Excerpt;
@@ -13,6 +14,23 @@ export type Manifest = {
  * ("producer", "landr"), because anything shipped to the browser is visible in
  * the network tab and would un-blind the test.
  */
+export type TestSummary = {
+  slug: string;
+  title: string;
+  blurb: string;
+  labels: number;
+  length_s: number;
+};
+
+/**
+ * Which test to load. A link carries `?test=<slug>`; without one the page
+ * offers whatever is published, so one deployment can host several at once.
+ */
+export function requestedSlug(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("test");
+}
+
 export function assertBlind(manifest: Manifest): void {
   const serialized = JSON.stringify(manifest).toLowerCase();
   for (const label of manifest.labels) {

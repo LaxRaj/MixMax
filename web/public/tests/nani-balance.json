@@ -1,0 +1,19 @@
+{
+  "slug": "nani-balance",
+  "title": "Nani-ki-kahani \u2014 how loud should the vocal sit?",
+  "blurb": "Three balances between the vocal and the beat. Same performance, same beat.",
+  "labels": [
+    "A",
+    "B",
+    "C"
+  ],
+  "urls": {
+    "A": "/audio/nani-balance/A.m4a",
+    "B": "/audio/nani-balance/B.m4a",
+    "C": "/audio/nani-balance/C.m4a"
+  },
+  "excerpt": {
+    "start_s": 0,
+    "length_s": 50.0
+  }
+}

@@ -20,13 +20,47 @@ export const SINGLE_MANIFEST = {
   excerpt: { start_s: 0, length_s: 6 },
 };
 
-/** Pin the manifest the page will load. Call before `goto`. */
-export async function useManifest(page: Page, manifest: unknown): Promise<void> {
-  await page.route("**/test.json", (route) =>
+/**
+ * Pin the manifest the page will load. Call before `goto`.
+ *
+ * The page resolves a test from `?test=<slug>` via /tests/<slug>.json, or
+ * offers /tests/index.json when no slug is given. Both are stubbed so a test
+ * never depends on what happens to be published.
+ */
+export async function useManifest(
+  page: Page,
+  manifest: { slug?: string } & Record<string, unknown>,
+): Promise<void> {
+  const slug = (manifest.slug as string) ?? "e2e";
+  const json = (body: unknown) => ({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(body),
+  });
+
+  // One handler for both, because Playwright matches routes in reverse
+  // registration order: a broad `**/tests/*.json` glob registered second
+  // swallows index.json and hands the page a manifest where it expects a list.
+  await page.route("**/tests/*.json", (route) => {
+    const isIndex = route.request().url().endsWith("/index.json");
+    route.fulfill(
+      isIndex
+        ? json({ tests: [{ slug, title: "E2E", blurb: "", labels: 3, length_s: 6 }] })
+        : json(manifest),
+    );
+  });
+}
+
+/** Publish several tests, so the page has to offer a choice. */
+export async function useTestIndex(
+  page: Page,
+  tests: { slug: string; title: string; blurb: string; labels: number; length_s: number }[],
+): Promise<void> {
+  await page.route("**/tests/index.json", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(manifest),
+      body: JSON.stringify({ tests }),
     }),
   );
 }
@@ -82,9 +116,19 @@ export async function positionText(page: Page): Promise<string> {
   return (text ?? "").split("loops")[0].trim();
 }
 
-/** Labels the current manifest declares, so tests do not hard-code a count. */
+/**
+ * Labels the page is actually showing, so tests do not hard-code a count.
+ *
+ * Read from the DOM rather than refetched: the manifest path has moved once
+ * already, and a helper that refetches breaks every time it does.
+ */
 export async function manifestLabels(page: Page): Promise<string[]> {
-  return page.evaluate(() => fetch("/test.json").then((r) => r.json()).then((m) => m.labels));
+  const groups = page.locator('[role="radiogroup"][aria-label^="Score for "]');
+  await groups.first().waitFor({ state: "attached", timeout: 15_000 });
+  const names = await groups.evaluateAll((nodes) =>
+    nodes.map((n) => (n.getAttribute("aria-label") ?? "").replace("Score for ", "")),
+  );
+  return names.filter(Boolean);
 }
 
 export async function loadAudio(page: Page): Promise<void> {

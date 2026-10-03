@@ -503,6 +503,9 @@ The Python suite runs entirely on synthetic fixtures generated at test-setup
 time — no real audio required. The fixtures are also committed so the
 quickstart above works from a clean clone.
 
+One deployment hosts several listening tests at once: `/tests/<slug>.json` per
+test, selected with `?test=<slug>`, and a chooser when no slug is given.
+
 The browser suite drives the real app in Chromium at both desktop and phone
 viewports, asserting the guarantees that matter: the page hydrates, every
 version decodes and plays at once, switching does not restart a source or lose

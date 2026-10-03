@@ -5,24 +5,47 @@ import { Player } from "@/components/Player";
 import { Ranker } from "@/components/Ranker";
 import styles from "@/components/Form.module.css";
 import { downloadCsv, toCsv, type LabelResponse } from "@/lib/csv";
-import { assertBlind, type Manifest } from "@/lib/manifest";
+import {
+  assertBlind,
+  requestedSlug,
+  type Manifest,
+  type TestSummary,
+} from "@/lib/manifest";
 import { useBlindPlayer } from "@/lib/useBlindPlayer";
 
 export default function Page() {
   const [manifest, setManifest] = useState<Manifest | null>(null);
+  const [choices, setChoices] = useState<TestSummary[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/test.json")
-      .then((r) => {
-        if (!r.ok) throw new Error(`No test manifest (${r.status})`);
-        return r.json();
-      })
-      .then((data: Manifest) => {
-        assertBlind(data);
-        setManifest(data);
-      })
-      .catch((err: Error) => setLoadError(err.message));
+    const slug = requestedSlug();
+
+    // A named test loads directly. Without one, offer what is published —
+    // one deployment can host several listening tests at a time.
+    const load = slug
+      ? fetch(`/tests/${slug}.json`).then((r) => {
+          if (!r.ok) throw new Error(`No test called "${slug}" (${r.status})`);
+          return r.json().then((data: Manifest) => {
+            assertBlind(data);
+            setManifest(data);
+          });
+        })
+      : fetch("/tests/index.json")
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error("No tests published"))))
+          .then((data: { tests: TestSummary[] }) => {
+            if (data.tests.length === 1) {
+              return fetch(`/tests/${data.tests[0].slug}.json`)
+                .then((r) => r.json())
+                .then((only: Manifest) => {
+                  assertBlind(only);
+                  setManifest(only);
+                });
+            }
+            setChoices(data.tests);
+          });
+
+    load.catch((err: Error) => setLoadError(err.message));
   }, []);
 
   if (loadError) {
@@ -31,6 +54,28 @@ export default function Page() {
         <div className={styles.lede}>
           <h1>Nothing to listen to</h1>
           <p>{loadError}</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (choices) {
+    return (
+      <main className={styles.page}>
+        <div className={`${styles.lede} rise`}>
+          <h1>Two things to listen to</h1>
+          <p>Each takes about five minutes. Pick either — they&apos;re independent.</p>
+        </div>
+        <div className={styles.chooser}>
+          {choices.map((test) => (
+            <a key={test.slug} className={styles.choice} href={`/?test=${test.slug}`}>
+              <span className={styles.choiceTitle}>{test.title}</span>
+              <span className={styles.choiceBlurb}>{test.blurb}</span>
+              <span className={styles.choiceMeta}>
+                {test.labels} versions · {Math.round(test.length_s)}s each
+              </span>
+            </a>
+          ))}
         </div>
       </main>
     );
@@ -64,6 +109,7 @@ function Test({ manifest }: { manifest: Manifest }) {
   );
   const [ranking, setRanking] = useState<string[]>(labels);
   const title = manifest.title ?? (single ? "Have a listen" : "Which of these sounds finished?");
+  const blurb = manifest.blurb;
   const [submitted, setSubmitted] = useState(false);
 
   // Space toggles, number keys switch version -- the comparison should never
@@ -141,9 +187,10 @@ function Test({ manifest }: { manifest: Manifest }) {
         <div className={`${styles.lede} rise`}>
           <h1>{title}</h1>
           <p>
-            {single
-              ? "The full track, start to finish. It loops."
-              : `${labels.length} versions of the same recording, processed differently. About five minutes.`}
+            {blurb ??
+              (single
+                ? "The full track, start to finish. It loops."
+                : `${labels.length} versions of the same recording, processed differently. About five minutes.`)}
           </p>
           <div className={styles.note}>
             {single ? (

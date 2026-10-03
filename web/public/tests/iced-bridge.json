@@ -1,0 +1,19 @@
+{
+  "slug": "iced-bridge",
+  "title": "Iced Latte \u2014 how deep should the breakdown go?",
+  "blurb": "Three depths for the filter on the breakdown, into the drop.",
+  "labels": [
+    "A",
+    "B",
+    "C"
+  ],
+  "urls": {
+    "A": "/audio/iced-bridge/A.m4a",
+    "B": "/audio/iced-bridge/B.m4a",
+    "C": "/audio/iced-bridge/C.m4a"
+  },
+  "excerpt": {
+    "start_s": 0,
+    "length_s": 50.0
+  }
+}
