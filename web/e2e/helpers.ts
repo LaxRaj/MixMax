@@ -1,5 +1,36 @@
 import type { Page } from "@playwright/test";
 
+/**
+ * The suite serves its own manifest rather than whatever happens to be
+ * published. A test that breaks because a different song went live is testing
+ * the content, not the player.
+ */
+export const FIXTURE_MANIFEST = {
+  slug: "e2e-fixture",
+  labels: ["A", "B", "C"],
+  urls: { A: "/fixtures/x.m4a", B: "/fixtures/y.m4a", C: "/fixtures/z.m4a" },
+  excerpt: { start_s: 0, length_s: 6 },
+};
+
+export const SINGLE_MANIFEST = {
+  slug: "e2e-single",
+  title: "One track",
+  labels: ["A"],
+  urls: { A: "/fixtures/x.m4a" },
+  excerpt: { start_s: 0, length_s: 6 },
+};
+
+/** Pin the manifest the page will load. Call before `goto`. */
+export async function useManifest(page: Page, manifest: unknown): Promise<void> {
+  await page.route("**/test.json", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(manifest),
+    }),
+  );
+}
+
 /** Source names that must never reach the browser. */
 export const SOURCE_NAMES = ["producer", "landr", "original", "emastered"];
 
@@ -58,5 +89,6 @@ export async function manifestLabels(page: Page): Promise<string[]> {
 
 export async function loadAudio(page: Page): Promise<void> {
   await page.getByRole("button", { name: /load the audio/i }).click();
-  await page.getByRole("radio", { name: "Version A" }).waitFor({ state: "visible", timeout: 45_000 });
+  // Single-version pages have no switcher, so wait on the transport instead.
+  await page.getByRole("button", { name: "Play" }).waitFor({ state: "visible", timeout: 45_000 });
 }

@@ -2,6 +2,7 @@ export type Excerpt = { start_s: number; length_s: number };
 
 export type Manifest = {
   slug: string;
+  title?: string;
   labels: string[];
   urls: Record<string, string>;
   excerpt?: Excerpt;

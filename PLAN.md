@@ -292,3 +292,7 @@
 2026-10-03 — The arranger composes nothing, and says so on every run. — A breakdown made by filtering existing material is a real technique and an honest one; presenting it as a written bridge would not be.
 2026-10-03 — Transition detection now watches the low end, not just energy. — The breakdown this tool builds holds its level and loses its bass, so the analyser could not see the drop it had just made.
 2026-10-03 — Filter sweeps blend between fixed-cutoff renders. — pedalboard has no cutoff automation, and per-block filtering leaves audible seams at the block boundaries.
+2026-10-03 — The extension planner alternates the hook with a contrasting section, and cycles through different takes of it. — The first version pasted the identical 17.8s hook twice in a row: 39 seconds of the same recording with an inaudible join, which the ear hears as one stretch that never develops.
+2026-10-03 — Contrast for the fill comes from the body, never the intro or outro. — Those sections are written to open and close; dropping to a 7-second intro between two choruses reads as a mistake rather than a breather.
+2026-10-03 — The listening page handles a single version: no switcher, no ranking, no volume-matching copy. — One track is not a comparison, and the blind-test framing is actively wrong for it.
+2026-10-03 — The browser suite serves its own fixture manifest instead of whatever is published. — Ten tests broke when a different song went live, which meant they were testing the content rather than the player.

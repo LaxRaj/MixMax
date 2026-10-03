@@ -40,6 +40,7 @@ export function Player({ player, labels }: { player: BlindPlayer; labels: string
   return (
     <div className={styles.console}>
       <div className={styles.inner}>
+        {labels.length > 1 && (
         <div className={styles.switcher} role="radiogroup" aria-label="Version">
           {labels.map((label, i) => (
             <button
@@ -57,6 +58,7 @@ export function Player({ player, labels }: { player: BlindPlayer; labels: string
             </button>
           ))}
         </div>
+        )}
 
         <div className={styles.transport}>
           <button

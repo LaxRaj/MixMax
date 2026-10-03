@@ -6,10 +6,14 @@ import {
   positionText,
   SOURCE_NAMES,
   tagSources,
+  useManifest,
+  FIXTURE_MANIFEST,
+  SINGLE_MANIFEST,
 } from "./helpers";
 
 test.describe("blind listening test", () => {
   test.beforeEach(async ({ page }) => {
+    await useManifest(page, FIXTURE_MANIFEST);
     await page.goto("/");
   });
 
@@ -144,5 +148,50 @@ test.describe("blind listening test", () => {
     const order = await page.locator('[class*="rankLabel"]').allTextContents();
     expect(order.slice(0, 3)).toEqual(["C", "A", "B"]);
     expect(order).toHaveLength(labels.length);
+  });
+});
+
+
+test.describe("single version", () => {
+  test.beforeEach(async ({ page }) => {
+    await useManifest(page, SINGLE_MANIFEST);
+    await page.goto("/");
+  });
+
+  test("there is nothing to switch between, so no switcher is shown", async ({ page }) => {
+    await loadAudio(page);
+    await expect(page.getByRole("radio", { name: "Version A" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
+  });
+
+  test("the blind-test copy is dropped", async ({ page }) => {
+    await expect(page.getByRole("heading", { name: /one track/i })).toBeVisible();
+    await expect(page.getByText(/volume-matched/i)).toHaveCount(0);
+    await expect(page.getByText(/names are meaningless/i)).toHaveCount(0);
+  });
+
+  test("ranking is hidden when there is nothing to rank", async ({ page }) => {
+    await expect(page.getByRole("heading", { name: /rank them/i })).toHaveCount(0);
+  });
+
+  test("it can still be scored and exported", async ({ page }) => {
+    await page.getByLabel(/your name/i).fill("Lakshya");
+    await page.getByRole("radiogroup", { name: "Score for A" })
+      .getByRole("radio", { name: "4" }).click();
+
+    const download = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: /finish and download/i }).click(),
+    ]).then(([d]) => d);
+
+    const stream = await download.createReadStream();
+    const csv = await new Promise<string>((resolve, reject) => {
+      let out = "";
+      stream.on("data", (c) => (out += c));
+      stream.on("end", () => resolve(out));
+      stream.on("error", reject);
+    });
+    expect(csv.trim().split("\n")).toHaveLength(2);
+    expect(csv).toContain("Lakshya,A,4,1");
   });
 });

@@ -50,6 +50,9 @@ export default function Page() {
 function Test({ manifest }: { manifest: Manifest }) {
   const player = useBlindPlayer(manifest);
   const labels = manifest.labels;
+  // One version is not a comparison: there is nothing to switch between, the
+  // volume-matching note is irrelevant, and a ranking of one is meaningless.
+  const single = labels.length === 1;
 
   const [listener, setListener] = useState("");
   const [headphones, setHeadphones] = useState(false);
@@ -60,6 +63,7 @@ function Test({ manifest }: { manifest: Manifest }) {
     Object.fromEntries(labels.map((l) => [l, ""])),
   );
   const [ranking, setRanking] = useState<string[]>(labels);
+  const title = manifest.title ?? (single ? "Have a listen" : "Which of these sounds finished?");
   const [submitted, setSubmitted] = useState(false);
 
   // Space toggles, number keys switch version -- the comparison should never
@@ -135,26 +139,37 @@ function Test({ manifest }: { manifest: Manifest }) {
 
       <main className={styles.page}>
         <div className={`${styles.lede} rise`}>
-          <h1>Which of these sounds finished?</h1>
+          <h1>{title}</h1>
           <p>
-            {labels.length} versions of the same recording, processed differently. About five
-            minutes.
+            {single
+              ? "The full track, start to finish. It loops."
+              : `${labels.length} versions of the same recording, processed differently. About five minutes.`}
           </p>
           <div className={styles.note}>
-            They&apos;re volume-matched, so you&apos;re judging the sound and not which is
-            loudest, and the names are meaningless on purpose. Headphones or real speakers if you
-            can — laptop speakers hide most of what&apos;s being tested.
+            {single ? (
+              <>
+                Headphones or real speakers if you can — laptop speakers hide most of what
+                matters. Scroll down to score it and leave notes.
+              </>
+            ) : (
+              <>
+                They&apos;re volume-matched, so you&apos;re judging the sound and not which is
+                loudest, and the names are meaningless on purpose. Headphones or real speakers
+                if you can — laptop speakers hide most of what&apos;s being tested.
+              </>
+            )}
           </div>
         </div>
 
         <section className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.step}>01</span>
-            <h2>Score each one</h2>
+            <h2>{single ? "Score it" : "Score each one"}</h2>
           </div>
           <p className={styles.sectionSub}>
-            Listen to all {labels.length} before scoring. Tap a letter above to switch instantly —
-            it keeps playing from the same spot.
+            {single
+              ? "Listen all the way through first. The notes box is the useful part."
+              : `Listen to all ${labels.length} before scoring. Tap a letter above to switch instantly — it keeps playing from the same spot.`}
           </p>
 
           {labels.map((label) => (
@@ -195,18 +210,20 @@ function Test({ manifest }: { manifest: Manifest }) {
           ))}
         </section>
 
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <span className={styles.step}>02</span>
-            <h2>Rank them</h2>
-          </div>
-          <p className={styles.sectionSub}>Best at the top. No ties.</p>
-          <Ranker ranking={ranking} onChange={setRanking} />
-        </section>
+        {!single && (
+          <section className={styles.section}>
+            <div className={styles.sectionHead}>
+              <span className={styles.step}>02</span>
+              <h2>Rank them</h2>
+            </div>
+            <p className={styles.sectionSub}>Best at the top. No ties.</p>
+            <Ranker ranking={ranking} onChange={setRanking} />
+          </section>
+        )}
 
         <section className={styles.section}>
           <div className={styles.sectionHead}>
-            <span className={styles.step}>03</span>
+            <span className={styles.step}>{single ? "02" : "03"}</span>
             <h2>About you</h2>
           </div>
 
@@ -239,10 +256,12 @@ function Test({ manifest }: { manifest: Manifest }) {
           )}
         </section>
 
-        <p className={styles.foot}>
-          Please don&apos;t try to work out which is which, or compare notes before sending — that
-          defeats the point of the letters.
-        </p>
+        {!single && (
+          <p className={styles.foot}>
+            Please don&apos;t try to work out which is which, or compare notes before sending —
+            that defeats the point of the letters.
+          </p>
+        )}
       </main>
     </>
   );

@@ -216,6 +216,10 @@ def render_arrangement(
     }
 
 
+def _clock(seconds: float) -> str:
+    return f"{int(seconds // 60)}:{int(seconds % 60):02d}"
+
+
 # The bridge is the hook's own material with the low end taken out. That is
 # what a breakdown is: the same song, stripped, so its return means something.
 BRIDGE_HIGHPASS_HZ = 230.0
@@ -234,6 +238,18 @@ DEFAULT_TARGET_S = 170.0
 def _longest(sections: list, label: str):
     matching = [s for s in sections if s.label == label]
     return max(matching, key=lambda s: s.end_s - s.start_s) if matching else None
+
+
+def _instances(sections: list, label: str, min_duration_s: float = 6.0) -> list:
+    """Every worthwhile occurrence of a label, longest first.
+
+    Repeating a hook is normal; repeating the *same recording* of it twice in a
+    row is not — the join is inaudible and the ear hears one long stretch that
+    never develops. Cycling through different instances keeps the performance
+    varying even when the part does not.
+    """
+    found = [s for s in sections if s.label == label and (s.end_s - s.start_s) >= min_duration_s]
+    return sorted(found, key=lambda s: s.end_s - s.start_s, reverse=True)
 
 
 def plan_extension(
@@ -317,20 +333,46 @@ def plan_extension(
     ))
     why.append(f"The drop is **{hook_label}** at full bandwidth straight after the riser.")
 
-    # Fill toward the target by repeating the hook, then close with the outro.
+    # Fill toward the target, alternating the hook with something else. Two
+    # hooks back to back is 35 seconds of identical audio with an inaudible
+    # join -- the ear hears one stretch that never develops.
+    hook_takes = _instances(sections, hook_label) or [hook]
+    # Contrast comes from the body. The first and last sections are the intro
+    # and outro: they are written to open and close, and dropping to a 7-second
+    # intro between two choruses reads as a mistake rather than a breather.
+    body_only = [s for s in others if s is not sections[0] and s is not sections[-1]]
+    contrast_pool = sorted(
+        [s for s in body_only if s.duration_s >= 6.0 and s is not bridge_source],
+        key=lambda s: s.duration_s,
+        reverse=True,
+    ) or sorted(
+        [s for s in body_only if s.duration_s >= 6.0],
+        key=lambda s: s.duration_s,
+        reverse=True,
+    )
+
     outro_len = outro.duration_s if outro else 0.0
-    guard = 0
-    while sum(s.duration_s for s in segments) + outro_len < target_duration_s and guard < 4:
+    added: list[str] = []
+    take, contrast = 1, 0   # take 0 was the drop
+    while sum(s.duration_s for s in segments) + outro_len < target_duration_s and len(added) < 6:
+        if added and added[-1] == hook_label and contrast_pool:
+            part = contrast_pool[contrast % len(contrast_pool)]
+            contrast += 1
+        else:
+            part = hook_takes[take % len(hook_takes)]
+            take += 1
         segments.append(Segment(
-            source_start_s=grid.snap(hook.start_s),
-            source_end_s=grid.snap(hook.end_s),
-            role=f"{hook_label} again",
+            source_start_s=grid.snap(part.start_s),
+            source_end_s=grid.snap(part.end_s),
+            role=f"{part.label} ({_clock(part.start_s)})",
         ))
-        guard += 1
-    if guard:
+        added.append(part.label)
+
+    if added:
         why.append(
-            f"{hook_label} repeats {guard} more time(s) to reach "
-            f"{target_duration_s / 60:.1f} min."
+            f"To reach {target_duration_s / 60:.1f} min it adds {' → '.join(added)}, "
+            "alternating rather than repeating the hook back to back, and drawing on "
+            "different takes of it so the same recording never plays twice in a row."
         )
 
     if outro is not None:
