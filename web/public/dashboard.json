@@ -50,7 +50,9 @@
       "slug": "nani-ki-kahani",
       "versions": [
         "MASTER",
+        "MASTER_extended",
         "beat",
+        "extended",
         "original",
         "vocal_mixed",
         "with_beat"
@@ -59,7 +61,9 @@
       "has_reference": false,
       "competitors": [
         "MASTER",
+        "MASTER_extended",
         "beat",
+        "extended",
         "vocal_mixed",
         "with_beat"
       ]

@@ -84,12 +84,20 @@ class BarGrid:
 
     @classmethod
     def from_audio(cls, path: str | Path) -> "BarGrid":
+        """Measure the grid, folding the tempo into a musical range first.
+
+        An octave error here is not cosmetic: at twice the true tempo the bar
+        is half as long, so every edit snaps to beat 3 as readily as beat 1 and
+        the cuts land off the downbeat.
+        """
+        from producer.analysis import fold_tempo
+
         track = Track.load(path)
         y = np.ascontiguousarray(track.mono(), dtype=np.float32)
         tempo, beats = librosa.beat.beat_track(y=y, sr=track.sample_rate, trim=False)
         times = librosa.frames_to_time(beats, sr=track.sample_rate)
         first = float(times[0]) if len(times) else 0.0
-        return cls(float(np.atleast_1d(tempo)[0]), first, track.duration_s)
+        return cls(fold_tempo(float(np.atleast_1d(tempo)[0])), first, track.duration_s)
 
     def snap(self, seconds: float) -> float:
         """Nearest bar line, clamped inside the track."""

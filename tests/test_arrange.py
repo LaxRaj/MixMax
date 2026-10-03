@@ -232,3 +232,20 @@ def test_arrange_dry_run_writes_nothing(tmp_path: Path, song: Path) -> None:
     )
     assert result.exit_code == 0, result.output
     assert not out.exists()
+
+
+def test_grid_folds_an_octave_error(tmp_path: Path) -> None:
+    """At twice the true tempo the bar halves, and cuts land on beat 3.
+
+    The structure analyser read a real track as 199 BPM where the beat under it
+    measured 99.4; the grid must not inherit that.
+    """
+    from producer.analysis import TEMPO_FOLD_RANGE
+
+    path = tmp_path / "fast.wav"
+    sf.write(str(path), np.concatenate([_part(8, 1.0, 0.8, 3)] * 3), SR)
+    grid = BarGrid.from_audio(path)
+
+    low, high = TEMPO_FOLD_RANGE
+    assert low <= grid.tempo_bpm <= high, grid.tempo_bpm
+    assert grid.bar_s == pytest.approx(BEATS_PER_BAR * 60.0 / grid.tempo_bpm)

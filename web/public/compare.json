@@ -179,8 +179,8 @@
       "slug": "nani-ki-kahani",
       "kind": "vocal-only",
       "kind_reason": "stops between phrases (8.0% quiet)",
-      "duration_s": 147.2,
-      "percent": 67,
+      "duration_s": 202.6,
+      "percent": 83,
       "stages": [
         {
           "key": "intake",
@@ -213,9 +213,9 @@
         {
           "key": "arrangement",
           "label": "Arrangement",
-          "state": "todo",
-          "detail": "2.45 min, no breakdown",
-          "blocker": "producer arrange"
+          "state": "done",
+          "detail": "3.38 min, 5 section types, with a breakdown",
+          "blocker": ""
         },
         {
           "key": "judged",
@@ -233,120 +233,141 @@
           "lra": 7.59
         },
         "final": {
-          "lufs": -16.13,
+          "lufs": -16.1,
           "true_peak_dbtp": -3.0,
-          "crest_factor_db": 15.06,
-          "lra": 6.17
+          "crest_factor_db": 15.12,
+          "lra": 4.92
         },
-        "final_file": "MASTER.wav"
+        "final_file": "MASTER_extended.wav"
       },
       "arrangement": {
-        "sections": 10,
+        "sections": 11,
         "types": 5,
         "transitions": [
           {
-            "at_s": 19.08,
+            "at_s": 18.98,
             "from_label": "A",
             "to_label": "B",
-            "energy_change_db": 6.01,
+            "energy_change_db": 5.98,
             "low_change_db": -0.52,
             "kind": "lift"
           },
           {
-            "at_s": 136.09,
+            "at_s": 136.0,
             "from_label": "B",
             "to_label": "A",
-            "energy_change_db": -4.18,
+            "energy_change_db": -4.19,
             "low_change_db": -3.47,
             "kind": "drop"
           },
           {
-            "at_s": 144.53,
+            "at_s": 144.44,
             "from_label": "A",
+            "to_label": "C",
+            "energy_change_db": 2.57,
+            "low_change_db": -8.63,
+            "kind": "breakdown"
+          },
+          {
+            "at_s": 176.58,
+            "from_label": "D",
+            "to_label": "B",
+            "energy_change_db": 3.97,
+            "low_change_db": 8.98,
+            "kind": "lift"
+          },
+          {
+            "at_s": 200.53,
+            "from_label": "B",
             "to_label": "E",
-            "energy_change_db": -18.5,
-            "low_change_db": -32.54,
+            "energy_change_db": -36.47,
+            "low_change_db": -27.93,
             "kind": "drop"
           }
         ],
-        "notes": [
-          "At 2.5 min this is about 3s short of a typical single (2.5-4.0 min). Another section, or a repeat of the strongest one, closes the gap."
-        ],
+        "notes": [],
         "timeline": [
           {
             "label": "A",
             "start_s": 0.0,
-            "duration_s": 19.1,
-            "energy_db": -23.5,
+            "duration_s": 19.0,
+            "energy_db": -23.47,
             "low_energy_db": -4.56
           },
           {
             "label": "B",
-            "start_s": 19.08,
+            "start_s": 18.98,
             "duration_s": 25.5,
             "energy_db": -17.49,
             "low_energy_db": -5.08
           },
           {
             "label": "B",
-            "start_s": 44.59,
-            "duration_s": 11.8,
-            "energy_db": -17.21,
-            "low_energy_db": -4.15
-          },
-          {
-            "label": "C",
-            "start_s": 56.42,
-            "duration_s": 8.0,
-            "energy_db": -17.69,
-            "low_energy_db": -6.04
-          },
-          {
-            "label": "B",
-            "start_s": 64.39,
-            "duration_s": 15.3,
+            "start_s": 44.5,
+            "duration_s": 19.8,
             "energy_db": -17.4,
-            "low_energy_db": -5.1
+            "low_energy_db": -4.77
           },
           {
             "label": "B",
-            "start_s": 79.69,
-            "duration_s": 25.5,
-            "energy_db": -17.76,
-            "low_energy_db": -4.76
+            "start_s": 64.3,
+            "duration_s": 40.8,
+            "energy_db": -17.62,
+            "low_energy_db": -4.9
           },
           {
-            "label": "D",
-            "start_s": 105.17,
+            "label": "A",
+            "start_s": 105.08,
             "duration_s": 8.7,
             "energy_db": -19.28,
             "low_energy_db": -7.13
           },
           {
             "label": "B",
-            "start_s": 113.88,
+            "start_s": 113.79,
             "duration_s": 22.2,
-            "energy_db": -17.91,
+            "energy_db": -17.9,
             "low_energy_db": -4.45
           },
           {
             "label": "A",
-            "start_s": 136.09,
+            "start_s": 136.0,
             "duration_s": 8.4,
             "energy_db": -22.09,
             "low_energy_db": -7.92
           },
           {
+            "label": "C",
+            "start_s": 144.44,
+            "duration_s": 25.8,
+            "energy_db": -19.52,
+            "low_energy_db": -16.55
+          },
+          {
+            "label": "D",
+            "start_s": 170.27,
+            "duration_s": 6.3,
+            "energy_db": -21.49,
+            "low_energy_db": -14.02
+          },
+          {
+            "label": "B",
+            "start_s": 176.58,
+            "duration_s": 23.9,
+            "energy_db": -17.52,
+            "low_energy_db": -5.04
+          },
+          {
             "label": "E",
-            "start_s": 144.53,
-            "duration_s": 2.7,
-            "energy_db": -40.59,
-            "low_energy_db": -40.46
+            "start_s": 200.53,
+            "duration_s": 2.1,
+            "energy_db": -53.99,
+            "low_energy_db": -32.97
           }
         ]
       },
       "listening": null,
-      "next_step": "producer arrange"
+      "next_step": "producer blindtest"
     },
     {
       "slug": "sector-79-60",
