@@ -191,3 +191,54 @@ producer tally      ->  pull responses, un-blind locally, aggregate
 2026-10-03 — Position is tracked only while playing. — A suspended AudioContext's `currentTime` is unrelated to playback position; reading it idle displayed load time as position.
 2026-10-03 — Added a Playwright suite that drives the real app, rather than an LLM agent clicking through it. — The guarantees here are mechanical (same source objects across a switch, no source name in the DOM); a deterministic assertion proves them, where an agent's impression cannot.
 2026-10-03 — No agent scores the listening test. — An agent cannot hear. Invented scores would feed `producer tune` and optimise the chain toward noise, corrupting the one measurement the project depends on.
+
+---
+
+# Part 2 — The pipeline dashboard
+
+> One page showing the whole process and, more importantly, **how much of it rests on evidence**.
+
+- **Success metric:** You can open one page and answer "what do we actually know, and what am I still guessing?" without running a command.
+- **Status:** F5 — in progress.
+
+## Why this screen, and not a prettier one
+
+This project keeps surfacing the same tension: some numbers are **published**, some are **measured from a corpus**, and some are **invented by whoever typed them**. Three times now, a number that looked authoritative turned out to be a guess — the `-16..-9` QA window, the de-ess frequency, and my own Spotify normalization model before it was checked against the docs.
+
+So the dashboard's job is not to look like a plugin. It is to make the **provenance of every number visible**, and to show plainly where the evidence runs out — which is currently at the only question that matters, whether any of this sounds good.
+
+## What it shows
+
+1. **The pipeline** — intake → mix → master → QA → benchmark → blind test, with each stage's real state: how many tracks are through it, what failed, what is stale.
+2. **Evidence ledger** — every tunable number, with where it came from: `published` (a platform spec), `measured` (the reference corpus), `fitted` (`producer tune`), or `guessed` (a default nobody has checked). This is the heart of the page.
+3. **Standards conformance** — per master, what each platform does to it, and the headroom given up for nothing.
+4. **Library profile** — what the corpus of real releases measures like, and where our masters sit against it.
+5. **Listening results** — blind test scores when they exist, and an honest empty state when they do not.
+
+## Non-goals
+- No audio processing in the browser. The CLI stays the engine; this reads its JSON output.
+- No live transport or waveform editing — the listening test already covers playing audio.
+- Not a replacement for the CLI, and not a control surface. **Read-only.**
+
+## Architecture
+
+The CLI already emits JSON for every stage. A `producer dashboard` command collects those into one `dashboard.json`, and the page renders it. No server, no database, no second source of truth — the same decision as the listening test.
+
+```
+producer dashboard --workspace comparisons --library reference_library.json
+  -> web/public/dashboard.json  -> open the page
+```
+
+**Riskiest assumption:** that an evidence ledger is actually more useful than a conventional dashboard of charts. It is a bet that knowing *why* a threshold exists beats seeing another gauge of the threshold itself.
+
+## Milestones
+
+### [ ] F5 — Dashboard
+
+- **Deliverable:** `producer dashboard` emits the aggregate JSON; a page renders the pipeline, the evidence ledger, standards conformance and library profile, with honest empty states.
+- **Acceptance criteria:**
+  - [ ] Every number on the page is labelled published / measured / fitted / guessed
+  - [ ] Stages with no data say so plainly rather than rendering an empty chart
+  - [ ] Works with a completely empty workspace (nothing ingested yet)
+  - [ ] No source names leak from any blind test in progress
+  - [ ] Covered by the Playwright suite
