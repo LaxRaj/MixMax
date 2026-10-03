@@ -4,7 +4,7 @@
 
 - **Success metric:** `producer batch` runs against 3–5 real vocal files from friends and produces a `report.md` with automated QA results, plus your own subjective "does this sound release-ready" verdict per file.
 - **Deadline:** ~1 week out (assumption — 6 milestones, each ≤1 day; adjust if wrong).
-- **Status:** M0–M7 built plus chain fitting and a reference library, 121 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: reference tracks** — `producer render` needs one per track, or a fallback.
+- **Status:** M0–M7 built plus chain fitting, a reference library and standards conformance, 140 tests green from a clean clone. Outstanding: every acceptance criterion that requires **real friend-supplied vocals** is still unchecked — the pipeline has only been exercised against synthetic fixtures. M6 adds the benchmarking and blind-listening tooling; M7 adds the intake gate so real vocals can go in. **Next blocker: reference tracks** — `producer render` needs one per track, or a fallback.
 - **Repo:** `~/Desktop/projects/MixMax` — https://github.com/LaxRaj/MixMax
 
 ## Non-goals
@@ -272,3 +272,7 @@
 2026-10-03 — The library stores measurements only, never audio. — Reference tracks are commercial records; the catalogue is derived data and the audio stays wherever the user keeps it.
 2026-10-03 — Tracks are classified full-mix vs vocal-only from low-end energy. — Mastering a bare vocal toward a full-mix reference asks matchering to invent bass that was never recorded, which looks like a chain fault and is not one.
 2026-10-03 — Tempo matching folds half and double time. — 70 and 140 BPM are the same groove, and librosa reports either; without folding, the right reference ranks as the most distant.
+2026-10-03 — Added `producer standards`: published platform targets, and what each does to a master. — Loudness normalisation means a master louder than the target is turned down on playback and the limiting that bought it is discarded; stating that for a specific file is the most actionable thing the pipeline can say.
+2026-10-03 — Standards are data with `source` and `as_of`, replaceable from JSON. — Platform targets drift and my figures have a knowledge cutoff; the mechanism stays correct when a number goes stale, and the provenance travels with every profile.
+2026-10-03 — Platform behaviour is modelled, not just the target number. — YouTube only attenuates (a quiet master stays quiet), Spotify also raises (which can push true peak over the ceiling), and Amazon's peak limit is stricter; the number alone would miss all three.
+2026-10-03 — Conformance consequences are summarised once per master, not once per platform. — The first version printed the same sentence eight times, which buried the finding it was making.

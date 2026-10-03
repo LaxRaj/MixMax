@@ -246,6 +246,44 @@ producer tally --key blind/my_song.key.json --responses responses/ --out results
 With fewer than three listeners the report labels itself an anecdote rather
 than a verdict.
 
+### `producer standards` — check against published targets
+
+Every streaming platform normalises playback loudness, which makes most
+loudness-chasing pointless. This says exactly what each one does to a file.
+
+```bash
+producer standards list                       # the targets, and where each came from
+producer standards check --file out.wav       # what every platform does to this master
+producer standards profile --standard spotify --out qa_profile.json
+producer qa --file out.wav --standard spotify
+```
+
+```
+out.wav: -11.0 LUFS, true peak -6.71 dBTP, crest 6.1 dB
+
+platform                      target     gain  delivered  peak after
+Spotify                         -14    -3.0     -14.0      -9.75   ok
+Apple Music (Sound Check)       -16    -5.0     -16.0     -11.75   ok
+EBU R128 (broadcast)            -23   -12.0     -23.0     -18.75   ok
+
+What that means:
+  - Every target here attenuates this, by 3.0 to 12.0 dB. It plays back at -14.0
+    to -23.0 LUFS whatever you do, so the limiting that reached -11.0 LUFS buys
+    nothing on playback.
+  - Crest factor is 6.1 dB. Mastering around -14 LUFS instead would give back
+    roughly 3.0 dB of headroom at no cost in delivered loudness.
+```
+
+It models behaviour, not just numbers: YouTube only turns masters *down*, so a
+quiet one stays quiet and sounds weak; Spotify turns them *up*, which can push
+true peak over the ceiling. Amazon's peak ceiling is stricter than everyone
+else's.
+
+**Targets drift and these ship with a date.** Each entry carries `source` and
+`as_of`, and `--standards table.json` replaces the whole table without a code
+change. Verify against the current published spec before trusting one for a
+release.
+
 ### `producer library` — learn from real releases
 
 Two numbers in this pipeline were invented rather than measured: the QA

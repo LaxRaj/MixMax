@@ -33,6 +33,12 @@ from producer.audio import human_size
 from producer.mastering import master_track
 from producer.mix import ChainParams, DEFAULT_PARAMS, mix_vocal
 from producer.qa import DEFAULT_PROFILE, QAProfile, run_qa
+from producer.standards import (
+    evaluate_all,
+    load_standards,
+    summarize_conformance,
+    to_qa_profile,
+)
 from producer.tune import tune_chain
 from producer.report_plot import plot_comparison
 
@@ -108,9 +114,30 @@ def echo_qa(report: dict) -> None:
 @click.option("--file", "file_path", required=True, type=EXISTING_FILE, help="Audio to check.")
 @click.option("--profile", "profile_path", type=EXISTING_FILE,
               help="QA thresholds from `producer library thresholds`.")
-def qa(file_path: Path, profile_path: Path | None) -> None:
+@click.option("--standard", "standard_key",
+              help="Judge against a published standard instead, e.g. spotify.")
+def qa(file_path: Path, profile_path: Path | None, standard_key: str | None) -> None:
     """Run the automated QA gate against FILE and print the report as JSON."""
-    profile = QAProfile.load(profile_path) if profile_path else DEFAULT_PROFILE
+    if profile_path and standard_key:
+        raise click.ClickException("Use --profile or --standard, not both.")
+
+    if standard_key:
+        table = load_standards()
+        if standard_key not in table:
+            raise click.ClickException(
+                f"Unknown standard {standard_key!r}. Available: {', '.join(table)}."
+            )
+        import tempfile as _tempfile
+
+        payload = to_qa_profile(table[standard_key])
+        with _tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+            json.dump(payload, fh)
+        profile = QAProfile.load(fh.name)
+    elif profile_path:
+        profile = QAProfile.load(profile_path)
+    else:
+        profile = DEFAULT_PROFILE
+
     click.echo(json.dumps(run_qa(file_path, profile), indent=2))
 
 
@@ -470,3 +497,107 @@ def classify_vocal_kind(metrics: dict) -> str:
     from producer.library import classify_kind
 
     return classify_kind(metrics["band_balance_db"])
+
+
+STANDARDS_OPT = click.option(
+    "--standards", "standards_path", type=EXISTING_FILE,
+    help="Replace the built-in targets with a JSON table.",
+)
+
+
+@cli.group()
+def standards() -> None:
+    """Check a master against published loudness standards."""
+
+
+@standards.command("list")
+@STANDARDS_OPT
+def standards_list(standards_path: Path | None) -> None:
+    """Show the targets, and where each figure came from."""
+    table = load_standards(standards_path)
+    click.echo(f"{'key':<16} {'target':>8} {'peak':>8}  {'up?':<5} {'source':<34} as of")
+    for s in table.values():
+        click.echo(
+            f"{s.key:<16} {s.target_lufs:>6.0f} LUFS {s.max_true_peak_dbtp:>5.0f} dBTP  "
+            f"{('yes' if s.normalizes_up else 'no'):<5} {(s.source or '—')[:33]:<34} {s.as_of or '—'}"
+        )
+    click.secho(
+        "\nPlatform targets drift. Verify against the current published spec "
+        "before trusting one for a release; --standards replaces this table.",
+        fg="yellow",
+    )
+
+
+@standards.command("check")
+@click.option("--file", "file_path", required=True, type=EXISTING_FILE, help="Master to check.")
+@click.option("--standard", "standard_key", help="Only this one.")
+@click.option("--out", "out_path", type=OUT_FILE, help="Write the report as JSON.")
+@STANDARDS_OPT
+def standards_check(
+    file_path: Path, standard_key: str | None, out_path: Path | None, standards_path: Path | None
+) -> None:
+    """Report what each platform will do to this master on playback."""
+    table = load_standards(standards_path)
+    if standard_key:
+        if standard_key not in table:
+            raise click.ClickException(
+                f"Unknown standard {standard_key!r}. Available: {', '.join(table)}."
+            )
+        table = {standard_key: table[standard_key]}
+
+    metrics = measure_audio(file_path)
+    results = evaluate_all(metrics, table)
+
+    click.echo(f"{file_path.name}: {metrics['lufs']:.1f} LUFS, "
+               f"true peak {metrics['true_peak_dbtp']:+.2f} dBTP, "
+               f"crest {metrics['crest_factor_db']:.1f} dB\n")
+    click.echo(f"{'platform':<28} {'target':>7} {'gain':>8} {'delivered':>10} {'peak after':>11}")
+    for r in results:
+        verdict = click.style("ok", fg="green") if r.conforms else click.style("issues", fg="red")
+        click.echo(
+            f"{table[r.standard].name[:27]:<28} {r.target_lufs:>6.0f} "
+            f"{r.normalization_gain_db:>+7.1f} {r.delivered_lufs:>9.1f} "
+            f"{r.true_peak_after_norm_dbtp:>+10.2f}   {verdict}"
+        )
+
+    notes = summarize_conformance(metrics, results, table)
+    if notes:
+        click.echo("\nWhat that means:")
+        for note in notes:
+            click.echo(f"  - {note}")
+
+    problems = [(r.standard, i) for r in results for i in r.issues]
+    if problems:
+        click.echo("\nIssues:")
+        for key, issue in problems:
+            click.echo(f"  - {table[key].name}: {issue}")
+
+    if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(
+            {"file": str(file_path), "measurement": metrics,
+             "conformance": [r.to_dict() for r in results]}, indent=2) + "\n")
+        click.echo(f"\nReport -> {out_path}")
+
+
+@standards.command("profile")
+@click.option("--standard", "standard_key", required=True, help="Which target to encode.")
+@click.option("--out", "out_path", type=OUT_FILE, default="qa_profile.json", show_default=True)
+@STANDARDS_OPT
+def standards_profile(standard_key: str, out_path: Path, standards_path: Path | None) -> None:
+    """Write a QA profile that accepts masters this standard delivers cleanly."""
+    table = load_standards(standards_path)
+    if standard_key not in table:
+        raise click.ClickException(
+            f"Unknown standard {standard_key!r}. Available: {', '.join(table)}."
+        )
+
+    payload = to_qa_profile(table[standard_key])
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(payload, indent=2) + "\n")
+
+    click.echo(f"{table[standard_key].name}: "
+               f"{payload['lufs_min']} .. {payload['lufs_max']} LUFS, "
+               f"true peak <= {payload['true_peak_max_dbtp']:.0f} dBTP")
+    click.echo(f"Profile -> {out_path}")
+    click.echo(f"Use it:  producer qa --file OUT.wav --profile {out_path}")
