@@ -1,0 +1,87 @@
+/* ── Studio hardware: warm charcoal, tube-glow amber, precise numerals ────── */
+
+:root {
+  --ink-900: #0b0908;
+  --ink-850: #110e0c;
+  --ink-800: #17130f;
+  --ink-700: #211b16;
+  --ink-600: #2e251e;
+  --line: #352a22;
+
+  --text: #f2ece2;
+  --text-dim: #9c9087;
+  --text-faint: #6b6058;
+
+  --glow: #ff9e2c;
+  --glow-hot: #ffc166;
+  --glow-deep: #c16a10;
+  --good: #7fd4a0;
+  --bad: #e8795f;
+
+  --radius: 10px;
+  --radius-lg: 16px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ink-900);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+  /* Warm bloom behind the console, like light off a rack unit. */
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(255, 158, 44, 0.09), transparent 70%),
+    radial-gradient(600px 400px at 85% 100%, rgba(255, 158, 44, 0.04), transparent 70%),
+    var(--ink-900);
+  background-attachment: fixed;
+}
+
+/* Fine grain, so large dark areas read as a surface rather than a void. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+
+:focus-visible {
+  outline: 2px solid var(--glow);
+  outline-offset: 3px;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.rise { animation: rise 0.6s var(--ease) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

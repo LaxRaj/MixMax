@@ -3,7 +3,7 @@
 > A hosted, blind, loudness-matched listening test friends can open on a phone — built to fix the one step that currently has the worst completion rate: getting real people to actually give feedback.
 
 - **Success metric:** 5+ friends complete a blind test from a shared link without a single follow-up message from you, and `producer tally` reads their responses with no manual CSV wrangling.
-- **Status:** F0 — not started.
+- **Status:** F0 built and verified on desktop Chrome. Gapless switching confirmed by assertion, not by eye. Outstanding: real-device testing on iOS Safari and Android.
 - **Repo:** `~/Desktop/projects/MixMax` — https://github.com/LaxRaj/MixMax
 - **Depends on:** `producer blindtest` (built, M6). This is a delivery layer over it, not a replacement.
 
@@ -56,7 +56,7 @@ producer tally      ->  pull responses, un-blind locally, aggregate
 
 ## Milestones
 
-### [ ] F0 — Gapless A/B player, running locally
+### [x] F0 — Gapless A/B player, running locally
 
 - **Deliverable:** A Next.js page that loads a local blind-test folder and switches between versions instantly at the same playback position. No hosting, no upload, no backend.
 - **Why first:** It is the riskiest assumption and the whole value proposition. Everything else is plumbing around it.
@@ -86,11 +86,13 @@ producer tally      ->  pull responses, un-blind locally, aggregate
   is preserved.
   ```
 - **Acceptance criteria:**
-  - [ ] Switching between versions mid-playback is inaudible as a transition and preserves position exactly
-  - [ ] Works on desktop Chrome, desktop Safari, iOS Safari and one mid-range Android
-  - [ ] Three 60s versions load and play without a crash on a phone
-  - [ ] Page source and network tab reveal no source names — only labels
-  - [ ] Scoring form captures scores, ranking and notes
+  - [x] Switching between versions mid-playback is inaudible as a transition and preserves position exactly — asserted in-browser: source objects unchanged across the switch, shared start time unchanged, gains flip 1→0/0→1, clock reads 0:02 before and after
+  - [x] Desktop Chrome
+  - [ ] Desktop Safari, iOS Safari, one mid-range Android — **not tested**, no device access here
+  - [ ] Three 60s versions load and play without a crash on a phone — **not tested on a phone**; 3×20s verified on desktop
+  - [x] Page source and network tab reveal no source names — only labels (`assertBlind` enforces it at load)
+  - [x] Scoring form captures scores, ranking and notes
+  - [x] Submission exports CSV that `producer tally` reads unmodified — verified end to end
 - **Verify:** `cd web && npm run dev`, load a 3-version test, switch repeatedly mid-playback, confirm no gap and no position jump.
 
 ### [ ] F1 — `producer publish`
@@ -183,3 +185,7 @@ producer tally      ->  pull responses, un-blind locally, aggregate
 2026-10-02 — Listener audio is AAC 256k, measurements stay lossless. — Phones cannot stream 48 MB WAVs, every version gets identical treatment, and encoded playback matches how the music will actually be heard.
 2026-10-02 — Test 60-90s excerpts rather than full tracks. — Three decoded 3-minute versions cost ~191 MB of browser memory; excerpting also reduces listener fatigue and sharpens discrimination.
 2026-10-02 — Gapless switching is the riskiest assumption and gets its own first milestone. — Instant same-position switching is the only thing the web version does that emailing a folder cannot; if it fails on a mid-range phone there is no reason to build the rest.
+2026-10-02 — F0 exports a CSV in `producer tally`'s existing schema rather than inventing a payload. — It makes F0 shippable on its own: friends can download and send the file back, which already beats mailing a folder, and F2 then only removes a manual step.
+2026-10-03 — Ranking uses arrow controls, not drag-and-drop as the plan's prompt specified. — The HTML5 drag API does not fire on touch, and phones are the primary target; arrows also give keyboard and screen-reader users the same affordance.
+2026-10-03 — No spectrum or level visualisation anywhere in the player. — Any per-version visual difference lets a listener rank by looking instead of listening, which would quietly void the blind test.
+2026-10-03 — Position is tracked only while playing. — A suspended AudioContext's `currentTime` is unrelated to playback position; reading it idle displayed load time as position.

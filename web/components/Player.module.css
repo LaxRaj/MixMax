@@ -1,0 +1,194 @@
+.console {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 16px;
+  background: linear-gradient(180deg, var(--ink-850) 0%, rgba(17, 14, 12, 0.96) 85%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+
+.inner { max-width: 640px; margin: 0 auto; }
+
+/* ── The switch: the one thing this page exists to do ──────────────────── */
+
+.switcher {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
+}
+
+.key {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 18px 8px 14px;
+  min-height: 84px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--ink-700), var(--ink-800));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: transform 0.12s var(--ease), border-color 0.18s, box-shadow 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.key:active { transform: translateY(2px); }
+
+.keyLabel {
+  font-family: var(--font-mono), monospace;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-dim);
+  transition: color 0.18s;
+}
+
+.keyHint {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Active key lights up like a tube. */
+.key[data-active="true"] {
+  border-color: var(--glow-deep);
+  background: linear-gradient(180deg, #2a1d0f, #1d1510);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 193, 102, 0.18),
+    0 0 0 1px rgba(255, 158, 44, 0.25),
+    0 0 26px -4px rgba(255, 158, 44, 0.45);
+}
+
+.key[data-active="true"] .keyLabel { color: var(--glow-hot); }
+.key[data-active="true"] .keyHint { color: var(--glow); }
+
+.lamp {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-600);
+}
+
+.key[data-active="true"] .lamp {
+  background: var(--glow);
+  box-shadow: 0 0 8px 1px var(--glow);
+}
+
+/* ── Transport ─────────────────────────────────────────────────────────── */
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.play {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--glow-deep);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #3a2512, #1b1410);
+  color: var(--glow-hot);
+  transition: transform 0.12s var(--ease), box-shadow 0.2s;
+  box-shadow: 0 0 18px -6px rgba(255, 158, 44, 0.5);
+}
+
+.play:active { transform: scale(0.94); }
+.play:disabled { opacity: 0.4; border-color: var(--line); color: var(--text-faint); box-shadow: none; }
+
+.timeline { flex: 1; min-width: 0; }
+
+.scrub {
+  width: 100%;
+  height: 26px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.scrub::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--glow) 0 var(--pct),
+    var(--ink-600) var(--pct) 100%
+  );
+}
+
+.scrub::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--glow) 0 var(--pct),
+    var(--ink-600) var(--pct) 100%
+  );
+}
+
+.scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--glow-hot);
+  box-shadow: 0 0 10px rgba(255, 158, 44, 0.7);
+}
+
+.scrub::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--glow-hot);
+}
+
+.readout {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-top: -2px;
+}
+
+.status {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+  min-height: 18px;
+}
+
+.error { color: var(--bad); }
+
+.loadBtn {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--glow-deep);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #2a1d0f, #1b1410);
+  color: var(--glow-hot);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 380px) {
+  .key { min-height: 72px; padding: 14px 4px 10px; }
+  .keyLabel { font-size: 24px; }
+}
