@@ -10,6 +10,7 @@ import click
 
 from producer.analysis import analyze_vocal
 from producer.benchmark import measure as measure_audio
+from producer.dashboard import build_dashboard
 from producer.batch import run_batch
 from producer.benchmark import build_benchmark_report, compare, discover_versions
 from producer.blindtest import build_blind_test, build_tally_report, tally
@@ -601,3 +602,42 @@ def standards_profile(standard_key: str, out_path: Path, standards_path: Path | 
                f"true peak <= {payload['true_peak_max_dbtp']:.0f} dBTP")
     click.echo(f"Profile -> {out_path}")
     click.echo(f"Use it:  producer qa --file OUT.wav --profile {out_path}")
+
+
+@cli.command()
+@click.option("--workspace", type=IN_DIR, help="Workspace created by `intake`.")
+@click.option("--library", "library_path", type=EXISTING_FILE, help="Reference library catalogue.")
+@click.option("--qa-profile", "qa_profile_path", type=EXISTING_FILE, help="Derived QA profile.")
+@click.option("--params", "chain_params_path", type=EXISTING_FILE, help="Fitted chain settings.")
+@click.option("--results", "results_path", type=EXISTING_FILE, help="Tallied listening results JSON.")
+@click.option("--out", "out_path", type=OUT_FILE, default="web/public/dashboard.json",
+              show_default=True, help="Where the page reads its data from.")
+def dashboard(
+    workspace: Path | None, library_path: Path | None, qa_profile_path: Path | None,
+    chain_params_path: Path | None, results_path: Path | None, out_path: Path,
+) -> None:
+    """Collect the whole pipeline's state for the dashboard page."""
+    data = build_dashboard(
+        workspace=workspace, library_path=library_path, qa_profile_path=qa_profile_path,
+        chain_params_path=chain_params_path, results_path=results_path,
+    )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(data, indent=2) + "\n")
+
+    summary = data["evidence_summary"]
+    for stage in data["stages"]:
+        click.echo(f"  {stage['label']:<18} {stage['done']}/{stage['total']}")
+
+    counts = summary["counts"]
+    click.echo(
+        f"\nEvidence: {summary['grounded_pct']}% of {summary['total']} numbers are grounded "
+        f"(published {counts.get('published', 0)}, measured {counts.get('measured', 0)}, "
+        f"fitted {counts.get('fitted', 0)}, reported {counts.get('reported', 0)}, "
+        f"guessed {counts.get('guessed', 0)})"
+    )
+    if counts.get("guessed"):
+        click.secho(
+            f"{counts['guessed']} number(s) are still hand-picked defaults nobody has checked.",
+            fg="yellow",
+        )
+    click.echo(f"Dashboard -> {out_path}")

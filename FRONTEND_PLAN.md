@@ -199,7 +199,7 @@ producer tally      ->  pull responses, un-blind locally, aggregate
 > One page showing the whole process and, more importantly, **how much of it rests on evidence**.
 
 - **Success metric:** You can open one page and answer "what do we actually know, and what am I still guessing?" without running a command.
-- **Status:** F5 — in progress.
+- **Status:** F5 built — `producer dashboard` plus the page, covered by 9 Playwright tests and 11 Python tests.
 
 ## Why this screen, and not a prettier one
 
@@ -233,12 +233,14 @@ producer dashboard --workspace comparisons --library reference_library.json
 
 ## Milestones
 
-### [ ] F5 — Dashboard
+### [x] F5 — Dashboard
 
 - **Deliverable:** `producer dashboard` emits the aggregate JSON; a page renders the pipeline, the evidence ledger, standards conformance and library profile, with honest empty states.
 - **Acceptance criteria:**
-  - [ ] Every number on the page is labelled published / measured / fitted / guessed
-  - [ ] Stages with no data say so plainly rather than rendering an empty chart
-  - [ ] Works with a completely empty workspace (nothing ingested yet)
-  - [ ] No source names leak from any blind test in progress
-  - [ ] Covered by the Playwright suite
+  - [x] Every number on the page is labelled published / measured / fitted / reported / guessed
+  - [x] Stages with no data say so plainly rather than rendering an empty chart
+  - [x] Works with a completely empty workspace, and when dashboard.json is missing
+  - [x] No source names leak from any blind test in progress
+  - [x] Covered by the Playwright suite (9 dashboard tests, desktop and phone)
+2026-10-03 — A fifth provenance tier, `reported`, sits between measured and guessed. — A widely reported platform target is weaker evidence than a published spec but far stronger than a de-ess frequency I picked; collapsing both to "guessed" misrepresented each.
+2026-10-03 — The dashboard computes nothing; it renders `dashboard.json`. — Same call as the listening test: a second implementation of any of these numbers could disagree with the CLI's.

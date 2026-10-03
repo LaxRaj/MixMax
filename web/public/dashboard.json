@@ -1,0 +1,902 @@
+{
+  "stages": [
+    {
+      "key": "intake",
+      "label": "Intake",
+      "done": 4,
+      "total": 4,
+      "blurb": "Raw vocals validated and standardised."
+    },
+    {
+      "key": "render",
+      "label": "Our master",
+      "done": 4,
+      "total": 4,
+      "blurb": "Mix chain, then reference-based mastering."
+    },
+    {
+      "key": "benchmark",
+      "label": "Benchmarked",
+      "done": 0,
+      "total": 4,
+      "blurb": "A commercial master to compare against."
+    },
+    {
+      "key": "listening",
+      "label": "Blind listening",
+      "done": 0,
+      "total": 3,
+      "blurb": "The only thing that answers whether it sounds good."
+    }
+  ],
+  "tracks": [
+    {
+      "slug": "bridge-quiet",
+      "versions": [
+        "original",
+        "producer"
+      ],
+      "has_ours": true,
+      "has_reference": false,
+      "competitors": [],
+      "measurement": {
+        "lufs": -15.34,
+        "lra": 0.56,
+        "true_peak_dbtp": -9.98,
+        "crest_factor_db": 7.41,
+        "spectral_centroid_hz": 2256.2
+      },
+      "band_balance_db": {
+        "sub": -45.38,
+        "low": -0.46,
+        "low_mid": -10.05,
+        "mid": -29.87,
+        "high_mid": -34.79,
+        "high": -36.88
+      },
+      "conformance": [
+        {
+          "standard": "spotify",
+          "target_lufs": -14.0,
+          "measured_lufs": -15.34,
+          "normalization_gain_db": 1.34,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -9.98,
+          "true_peak_after_norm_dbtp": -8.64,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "Spotify raises this by +1.3 dB, taking true peak to -8.64 dBTP."
+          ]
+        },
+        {
+          "standard": "apple_music",
+          "target_lufs": -16.0,
+          "measured_lufs": -15.34,
+          "normalization_gain_db": -0.66,
+          "delivered_lufs": -16.0,
+          "true_peak_dbtp": -9.98,
+          "true_peak_after_norm_dbtp": -10.64,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "youtube",
+          "target_lufs": -14.0,
+          "measured_lufs": -15.34,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -15.34,
+          "true_peak_dbtp": -9.98,
+          "true_peak_after_norm_dbtp": -9.98,
+          "conforms": false,
+          "issues": [
+            "delivered -15.3 LUFS vs target -14 (+/-1.0 LU)"
+          ],
+          "consequences": [
+            "YouTube does not turn quiet tracks up, so this plays 1.3 LU below everything around it."
+          ]
+        },
+        {
+          "standard": "amazon_music",
+          "target_lufs": -14.0,
+          "measured_lufs": -15.34,
+          "normalization_gain_db": 1.34,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -9.98,
+          "true_peak_after_norm_dbtp": -8.64,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "Amazon Music raises this by +1.3 dB, taking true peak to -8.64 dBTP."
+          ]
+        },
+        {
+          "standard": "tidal",
+          "target_lufs": -14.0,
+          "measured_lufs": -15.34,
+          "normalization_gain_db": 1.34,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -9.98,
+          "true_peak_after_norm_dbtp": -8.64,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "Tidal raises this by +1.3 dB, taking true peak to -8.64 dBTP."
+          ]
+        },
+        {
+          "standard": "deezer",
+          "target_lufs": -15.0,
+          "measured_lufs": -15.34,
+          "normalization_gain_db": 0.34,
+          "delivered_lufs": -15.0,
+          "true_peak_dbtp": -9.98,
+          "true_peak_after_norm_dbtp": -9.64,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "aes_td1008_track",
+          "target_lufs": -16.0,
+          "measured_lufs": -15.34,
+          "normalization_gain_db": -0.66,
+          "delivered_lufs": -16.0,
+          "true_peak_dbtp": -9.98,
+          "true_peak_after_norm_dbtp": -10.64,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "aes_td1008_album",
+          "target_lufs": -14.0,
+          "measured_lufs": -15.34,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -15.34,
+          "true_peak_dbtp": -9.98,
+          "true_peak_after_norm_dbtp": -9.98,
+          "conforms": false,
+          "issues": [
+            "delivered -15.3 LUFS vs target -14 (+/-0.2 LU)"
+          ],
+          "consequences": [
+            "AES TD1008 (album-normalized) does not turn quiet tracks up, so this plays 1.3 LU below everything around it."
+          ]
+        },
+        {
+          "standard": "ebu_r128",
+          "target_lufs": -23.0,
+          "measured_lufs": -15.34,
+          "normalization_gain_db": -7.66,
+          "delivered_lufs": -23.0,
+          "true_peak_dbtp": -9.98,
+          "true_peak_after_norm_dbtp": -17.64,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "EBU R128 (broadcast) attenuates this by -7.7 dB on playback, so it lands at -23.0 LUFS regardless. Any limiting done to reach -15.3 LUFS buys nothing here \u2014 it only costs dynamic range. Crest factor is 7.4 dB."
+          ]
+        },
+        {
+          "standard": "soundcloud",
+          "target_lufs": -14.0,
+          "measured_lufs": -15.34,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -15.34,
+          "true_peak_dbtp": -9.98,
+          "true_peak_after_norm_dbtp": -9.98,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        }
+      ],
+      "consequences": [
+        "1 of 10 targets (EBU R128 (broadcast)) attenuates this, by 7.7 to 7.7 dB. It plays back at -23.0 to -23.0 LUFS whatever you do, so the limiting that reached -15.3 LUFS buys nothing on playback.",
+        "Crest factor is 7.4 dB. Mastering around -23 LUFS instead would give back roughly 7.7 dB of headroom at no cost in delivered loudness.",
+        "3 target(s) raise this on playback; the largest takes true peak to -8.64 dBTP.",
+        "YouTube, AES TD1008 (album-normalized) do not turn quiet tracks up, so this plays noticeably below everything around it there."
+      ]
+    },
+    {
+      "slug": "lowrate",
+      "versions": [
+        "original",
+        "producer"
+      ],
+      "has_ours": true,
+      "has_reference": false,
+      "competitors": [],
+      "measurement": {
+        "lufs": -14.99,
+        "lra": 0.4,
+        "true_peak_dbtp": -10.2,
+        "crest_factor_db": 6.87,
+        "spectral_centroid_hz": 337.0
+      },
+      "band_balance_db": {
+        "sub": -77.35,
+        "low": -0.47,
+        "low_mid": -9.89,
+        "mid": -41.65,
+        "high_mid": -71.14,
+        "high": -81.41
+      },
+      "conformance": [
+        {
+          "standard": "spotify",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.99,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -9.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "apple_music",
+          "target_lufs": -16.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -1.01,
+          "delivered_lufs": -16.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -11.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "Apple Music (Sound Check) attenuates this by -1.0 dB on playback, so it lands at -16.0 LUFS regardless. Any limiting done to reach -15.0 LUFS buys nothing here \u2014 it only costs dynamic range. Crest factor is 6.9 dB."
+          ]
+        },
+        {
+          "standard": "youtube",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -14.99,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -10.2,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "amazon_music",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.99,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -9.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "tidal",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.99,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -9.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "deezer",
+          "target_lufs": -15.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -0.01,
+          "delivered_lufs": -15.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -10.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "aes_td1008_track",
+          "target_lufs": -16.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -1.01,
+          "delivered_lufs": -16.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -11.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "AES TD1008 (track-normalized) attenuates this by -1.0 dB on playback, so it lands at -16.0 LUFS regardless. Any limiting done to reach -15.0 LUFS buys nothing here \u2014 it only costs dynamic range. Crest factor is 6.9 dB."
+          ]
+        },
+        {
+          "standard": "aes_td1008_album",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -14.99,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -10.2,
+          "conforms": false,
+          "issues": [
+            "delivered -15.0 LUFS vs target -14 (+/-0.2 LU)"
+          ],
+          "consequences": [
+            "AES TD1008 (album-normalized) does not turn quiet tracks up, so this plays 1.0 LU below everything around it."
+          ]
+        },
+        {
+          "standard": "ebu_r128",
+          "target_lufs": -23.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -8.01,
+          "delivered_lufs": -23.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -18.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "EBU R128 (broadcast) attenuates this by -8.0 dB on playback, so it lands at -23.0 LUFS regardless. Any limiting done to reach -15.0 LUFS buys nothing here \u2014 it only costs dynamic range. Crest factor is 6.9 dB."
+          ]
+        },
+        {
+          "standard": "soundcloud",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -14.99,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -10.2,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        }
+      ],
+      "consequences": [
+        "3 of 10 targets (Apple Music (Sound Check), AES TD1008 (track-normalized), EBU R128 (broadcast)) attenuates this, by 1.0 to 8.0 dB. It plays back at -16.0 to -23.0 LUFS whatever you do, so the limiting that reached -15.0 LUFS buys nothing on playback.",
+        "Crest factor is 6.9 dB. Mastering around -16 LUFS instead would give back roughly 1.0 dB of headroom at no cost in delivered loudness.",
+        "AES TD1008 (album-normalized) do not turn quiet tracks up, so this plays noticeably below everything around it there."
+      ]
+    },
+    {
+      "slug": "verse-take-3",
+      "versions": [
+        "original",
+        "producer"
+      ],
+      "has_ours": true,
+      "has_reference": false,
+      "competitors": [],
+      "measurement": {
+        "lufs": -14.99,
+        "lra": 0.4,
+        "true_peak_dbtp": -10.2,
+        "crest_factor_db": 6.87,
+        "spectral_centroid_hz": 340.3
+      },
+      "band_balance_db": {
+        "sub": -77.34,
+        "low": -0.47,
+        "low_mid": -9.89,
+        "mid": -41.66,
+        "high_mid": -71.2,
+        "high": -80.33
+      },
+      "conformance": [
+        {
+          "standard": "spotify",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.99,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -9.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "apple_music",
+          "target_lufs": -16.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -1.01,
+          "delivered_lufs": -16.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -11.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "Apple Music (Sound Check) attenuates this by -1.0 dB on playback, so it lands at -16.0 LUFS regardless. Any limiting done to reach -15.0 LUFS buys nothing here \u2014 it only costs dynamic range. Crest factor is 6.9 dB."
+          ]
+        },
+        {
+          "standard": "youtube",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -14.99,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -10.2,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "amazon_music",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.99,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -9.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "tidal",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.99,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -9.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "deezer",
+          "target_lufs": -15.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -0.01,
+          "delivered_lufs": -15.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -10.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "aes_td1008_track",
+          "target_lufs": -16.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -1.01,
+          "delivered_lufs": -16.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -11.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "AES TD1008 (track-normalized) attenuates this by -1.0 dB on playback, so it lands at -16.0 LUFS regardless. Any limiting done to reach -15.0 LUFS buys nothing here \u2014 it only costs dynamic range. Crest factor is 6.9 dB."
+          ]
+        },
+        {
+          "standard": "aes_td1008_album",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -14.99,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -10.2,
+          "conforms": false,
+          "issues": [
+            "delivered -15.0 LUFS vs target -14 (+/-0.2 LU)"
+          ],
+          "consequences": [
+            "AES TD1008 (album-normalized) does not turn quiet tracks up, so this plays 1.0 LU below everything around it."
+          ]
+        },
+        {
+          "standard": "ebu_r128",
+          "target_lufs": -23.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -8.01,
+          "delivered_lufs": -23.0,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -18.21,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "EBU R128 (broadcast) attenuates this by -8.0 dB on playback, so it lands at -23.0 LUFS regardless. Any limiting done to reach -15.0 LUFS buys nothing here \u2014 it only costs dynamic range. Crest factor is 6.9 dB."
+          ]
+        },
+        {
+          "standard": "soundcloud",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -14.99,
+          "true_peak_dbtp": -10.2,
+          "true_peak_after_norm_dbtp": -10.2,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        }
+      ],
+      "consequences": [
+        "3 of 10 targets (Apple Music (Sound Check), AES TD1008 (track-normalized), EBU R128 (broadcast)) attenuates this, by 1.0 to 8.0 dB. It plays back at -16.0 to -23.0 LUFS whatever you do, so the limiting that reached -15.0 LUFS buys nothing on playback.",
+        "Crest factor is 6.9 dB. Mastering around -16 LUFS instead would give back roughly 1.0 dB of headroom at no cost in delivered loudness.",
+        "AES TD1008 (album-normalized) do not turn quiet tracks up, so this plays noticeably below everything around it there."
+      ]
+    },
+    {
+      "slug": "voice-memo-14",
+      "versions": [
+        "original",
+        "producer"
+      ],
+      "has_ours": true,
+      "has_reference": false,
+      "competitors": [],
+      "measurement": {
+        "lufs": -14.99,
+        "lra": 0.4,
+        "true_peak_dbtp": -10.18,
+        "crest_factor_db": 6.89,
+        "spectral_centroid_hz": 337.4
+      },
+      "band_balance_db": {
+        "sub": -75.05,
+        "low": -0.47,
+        "low_mid": -9.89,
+        "mid": -41.64,
+        "high_mid": -71.1,
+        "high": -81.12
+      },
+      "conformance": [
+        {
+          "standard": "spotify",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.99,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -10.18,
+          "true_peak_after_norm_dbtp": -9.19,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "apple_music",
+          "target_lufs": -16.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -1.01,
+          "delivered_lufs": -16.0,
+          "true_peak_dbtp": -10.18,
+          "true_peak_after_norm_dbtp": -11.19,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "Apple Music (Sound Check) attenuates this by -1.0 dB on playback, so it lands at -16.0 LUFS regardless. Any limiting done to reach -15.0 LUFS buys nothing here \u2014 it only costs dynamic range. Crest factor is 6.9 dB."
+          ]
+        },
+        {
+          "standard": "youtube",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -14.99,
+          "true_peak_dbtp": -10.18,
+          "true_peak_after_norm_dbtp": -10.18,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "amazon_music",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.99,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -10.18,
+          "true_peak_after_norm_dbtp": -9.19,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "tidal",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.99,
+          "delivered_lufs": -14.0,
+          "true_peak_dbtp": -10.18,
+          "true_peak_after_norm_dbtp": -9.19,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "deezer",
+          "target_lufs": -15.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -0.01,
+          "delivered_lufs": -15.0,
+          "true_peak_dbtp": -10.18,
+          "true_peak_after_norm_dbtp": -10.19,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        },
+        {
+          "standard": "aes_td1008_track",
+          "target_lufs": -16.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -1.01,
+          "delivered_lufs": -16.0,
+          "true_peak_dbtp": -10.18,
+          "true_peak_after_norm_dbtp": -11.19,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "AES TD1008 (track-normalized) attenuates this by -1.0 dB on playback, so it lands at -16.0 LUFS regardless. Any limiting done to reach -15.0 LUFS buys nothing here \u2014 it only costs dynamic range. Crest factor is 6.9 dB."
+          ]
+        },
+        {
+          "standard": "aes_td1008_album",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -14.99,
+          "true_peak_dbtp": -10.18,
+          "true_peak_after_norm_dbtp": -10.18,
+          "conforms": false,
+          "issues": [
+            "delivered -15.0 LUFS vs target -14 (+/-0.2 LU)"
+          ],
+          "consequences": [
+            "AES TD1008 (album-normalized) does not turn quiet tracks up, so this plays 1.0 LU below everything around it."
+          ]
+        },
+        {
+          "standard": "ebu_r128",
+          "target_lufs": -23.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": -8.01,
+          "delivered_lufs": -23.0,
+          "true_peak_dbtp": -10.18,
+          "true_peak_after_norm_dbtp": -18.19,
+          "conforms": true,
+          "issues": [],
+          "consequences": [
+            "EBU R128 (broadcast) attenuates this by -8.0 dB on playback, so it lands at -23.0 LUFS regardless. Any limiting done to reach -15.0 LUFS buys nothing here \u2014 it only costs dynamic range. Crest factor is 6.9 dB."
+          ]
+        },
+        {
+          "standard": "soundcloud",
+          "target_lufs": -14.0,
+          "measured_lufs": -14.99,
+          "normalization_gain_db": 0.0,
+          "delivered_lufs": -14.99,
+          "true_peak_dbtp": -10.18,
+          "true_peak_after_norm_dbtp": -10.18,
+          "conforms": true,
+          "issues": [],
+          "consequences": []
+        }
+      ],
+      "consequences": [
+        "3 of 10 targets (Apple Music (Sound Check), AES TD1008 (track-normalized), EBU R128 (broadcast)) attenuates this, by 1.0 to 8.0 dB. It plays back at -16.0 to -23.0 LUFS whatever you do, so the limiting that reached -15.0 LUFS buys nothing on playback.",
+        "Crest factor is 6.9 dB. Mastering around -16 LUFS instead would give back roughly 1.0 dB of headroom at no cost in delivered loudness.",
+        "AES TD1008 (album-normalized) do not turn quiet tracks up, so this plays noticeably below everything around it there."
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "name": "Reference corpus",
+      "value": "13 tracks",
+      "provenance": "measured",
+      "detail": "Median -19.4 LUFS, p5\u2013p95 -21.9 \u2026 -12.6. Genres: soul, trap.",
+      "source": "reference_library.json"
+    },
+    {
+      "name": "QA loudness window",
+      "value": "-16.0 \u2026 -9.0 LUFS",
+      "provenance": "guessed",
+      "detail": "Hand-picked, never checked against anything. A corpus of real releases put the comparable window near -22 \u2026 -13, so this one fails records that actually shipped.",
+      "source": "producer/qa.py defaults"
+    },
+    {
+      "name": "Highpass cutoff",
+      "value": "80Hz",
+      "provenance": "guessed",
+      "detail": "A conservative starting value, chosen by hand and never tested by ear.",
+      "source": "producer/mix.py defaults"
+    },
+    {
+      "name": "Noise gate",
+      "value": "-40dB",
+      "provenance": "guessed",
+      "detail": "A conservative starting value, chosen by hand and never tested by ear.",
+      "source": "producer/mix.py defaults"
+    },
+    {
+      "name": "Compressor threshold",
+      "value": "-18dB",
+      "provenance": "guessed",
+      "detail": "A conservative starting value, chosen by hand and never tested by ear.",
+      "source": "producer/mix.py defaults"
+    },
+    {
+      "name": "Compressor ratio",
+      "value": "3:1",
+      "provenance": "guessed",
+      "detail": "A conservative starting value, chosen by hand and never tested by ear.",
+      "source": "producer/mix.py defaults"
+    },
+    {
+      "name": "De-ess frequency",
+      "value": "7000Hz",
+      "provenance": "guessed",
+      "detail": "A conservative starting value, chosen by hand and never tested by ear.",
+      "source": "producer/mix.py defaults"
+    },
+    {
+      "name": "De-ess cut",
+      "value": "-4dB",
+      "provenance": "guessed",
+      "detail": "A conservative starting value, chosen by hand and never tested by ear.",
+      "source": "producer/mix.py defaults"
+    },
+    {
+      "name": "Reverb wet",
+      "value": "0.08",
+      "provenance": "guessed",
+      "detail": "A conservative starting value, chosen by hand and never tested by ear.",
+      "source": "producer/mix.py defaults"
+    },
+    {
+      "name": "Spotify",
+      "value": "-14 LUFS / -1 dBTP",
+      "provenance": "published",
+      "detail": "Applies positive gain to quiet masters, but only as far as their headroom allows: a -20 LUFS master peaking at -5 dBTP is lifted to -16, not -14. Masters louder than -14 LUFS should keep true peak below -2 dBTP.",
+      "source": "https://support.spotify.com/us/artists/article/loudness-normalization/ (2026-10)"
+    },
+    {
+      "name": "Apple Music (Sound Check)",
+      "value": "-16 LUFS / -1 dBTP",
+      "provenance": "published",
+      "detail": "Sound Check only turns tracks down, never up, and is off by default \u2014 so many listeners hear the master unnormalised.",
+      "source": "Apple Digital Masters guidance; Sound Check behaviour (2026-10)"
+    },
+    {
+      "name": "YouTube",
+      "value": "-14 LUFS / -1 dBTP",
+      "provenance": "reported",
+      "detail": "Only attenuates. A master quieter than the target stays quiet and will sound weak next to everything else. Widely reported, not confirmed at a primary source.",
+      "source": "Widely reported; no primary spec published (2026-10)"
+    },
+    {
+      "name": "Amazon Music",
+      "value": "-14 LUFS / -1 dBTP",
+      "provenance": "reported",
+      "detail": "Peak ceiling not confirmed at a primary source; -1 dBTP assumed. Widely reported, not confirmed at a primary source.",
+      "source": "Widely reported (2026-10)"
+    },
+    {
+      "name": "Tidal",
+      "value": "-14 LUFS / -1 dBTP",
+      "provenance": "reported",
+      "detail": " Widely reported, not confirmed at a primary source.",
+      "source": "Widely reported (2026-10)"
+    },
+    {
+      "name": "Deezer",
+      "value": "-15 LUFS / -1 dBTP",
+      "provenance": "reported",
+      "detail": " Widely reported, not confirmed at a primary source.",
+      "source": "Widely reported (2026-10)"
+    },
+    {
+      "name": "AES TD1008 (track-normalized)",
+      "value": "-16 LUFS / -1 dBTP",
+      "provenance": "published",
+      "detail": "Supersedes TD1004. -16 LUFS for track normalization, +0.2 LU upper tolerance, and the document says not to target the upper tolerance. Max true peak -1 dBTP at the codec input of lossy streams.",
+      "source": "AES TD1008 (2021-09-24) (2021-09)"
+    },
+    {
+      "name": "AES TD1008 (album-normalized)",
+      "value": "-14 LUFS / -1 dBTP",
+      "provenance": "published",
+      "detail": "-14 LUFS applies to the loudest track of an album under album normalization, as on-demand music services practise it.",
+      "source": "AES TD1008 (2021-09-24) (2021-09)"
+    },
+    {
+      "name": "EBU R128 (broadcast)",
+      "value": "-23 LUFS / -1 dBTP",
+      "provenance": "published",
+      "detail": "Broadcast, not streaming. -23 LUFS +/-0.5 LU (+/-1 LU for live). R128 v4.0, August 2020.",
+      "source": "EBU R128 v4.0 (2020-08)"
+    },
+    {
+      "name": "SoundCloud",
+      "value": "-14 LUFS / -1 dBTP",
+      "provenance": "reported",
+      "detail": "Applies no loudness normalization, so a quiet master really does play quieter than everything around it. The target here is only a sanity reference. Widely reported, not confirmed at a primary source.",
+      "source": "Widely reported (2026-10)"
+    }
+  ],
+  "evidence_summary": {
+    "counts": {
+      "measured": 1,
+      "guessed": 8,
+      "published": 5,
+      "reported": 5
+    },
+    "total": 19,
+    "grounded_pct": 58
+  },
+  "library": {
+    "count": 13,
+    "genre": null,
+    "lufs": {
+      "n": 13,
+      "min": -22.27,
+      "p5": -21.92,
+      "median": -19.39,
+      "p95": -12.64,
+      "max": -12.54
+    },
+    "lra": {
+      "n": 13,
+      "min": 0.3,
+      "p5": 0.31,
+      "median": 0.68,
+      "p95": 0.7,
+      "max": 0.71
+    },
+    "crest_factor_db": {
+      "n": 13,
+      "min": 3.09,
+      "p5": 3.16,
+      "median": 7.82,
+      "p95": 9.81,
+      "max": 9.87
+    },
+    "true_peak_dbtp": {
+      "n": 13,
+      "min": -11.71,
+      "p5": -11.12,
+      "median": -9.72,
+      "p95": -7.2,
+      "max": -7.19
+    },
+    "tempo_bpm": {
+      "n": 13,
+      "min": 74.9,
+      "p5": 82.52,
+      "median": 97.5,
+      "p95": 149.42,
+      "max": 152.0
+    },
+    "band_balance_db": {
+      "sub": -7.48,
+      "low": -1.32,
+      "low_mid": -11.0,
+      "mid": -35.77,
+      "high_mid": -45.02,
+      "high": -27.45
+    },
+    "kinds": {
+      "full-mix": 13
+    },
+    "keys": {
+      "G major": 2,
+      "G# major": 2,
+      "F major": 2,
+      "A major": 1,
+      "A# major": 1,
+      "A# minor": 1,
+      "B major": 1,
+      "E major": 1,
+      "F# major": 1,
+      "F# minor": 1
+    }
+  },
+  "listening": null
+}

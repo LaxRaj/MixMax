@@ -376,6 +376,36 @@ version decodes and plays at once, switching does not restart a source or lose
 position, nothing in the DOM or network traffic reveals which version is which,
 and the exported CSV matches the schema `producer tally` reads.
 
+### `producer dashboard` — the evidence ledger
+
+```bash
+producer dashboard --workspace comparisons --library reference_library.json
+cd web && npm run dev     # then open /dashboard
+```
+
+Collects every stage's state into `web/public/dashboard.json` and renders one
+page answering: **what do we actually know, and what am I still guessing?**
+
+Every tunable number is labelled by where it came from:
+
+| | |
+| --- | --- |
+| **published** | a platform or standards body's own document |
+| **measured** | derived from the reference corpus |
+| **fitted** | optimised against a measured target by `producer tune` |
+| **reported** | widely reported, not confirmed at a primary source |
+| **guessed** | a default nobody has checked against anything |
+
+```
+Evidence: 58% of 19 numbers are grounded
+  (published 5, measured 1, fitted 0, reported 5, guessed 8)
+8 number(s) are still hand-picked defaults nobody has checked.
+```
+
+The page is read-only and computes nothing of its own — the CLI stays the
+engine. It also states plainly where the evidence runs out, which is still at
+the only question that matters.
+
 ## The testing loop
 
 ```bash
