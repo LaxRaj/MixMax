@@ -143,7 +143,11 @@ def normalize_to_target(
         samples, achieved = _limit_and_trim(base, low, source.sample_rate, ceiling_dbtp, here)
 
         for passes in range(1, SEARCH_STEPS + 1):
-            if abs(achieved - target_lufs) <= TOLERANCE_LU:
+            # Land at or just under the target, never over. Overshooting a
+            # published target can trip a stricter peak ceiling -- Spotify asks
+            # for -2 dBTP on anything louder than -14 LUFS -- so a master that
+            # misses on the loud side fails a rule it would otherwise pass.
+            if target_lufs - TOLERANCE_LU <= achieved <= target_lufs:
                 break
             middle = (low + high) / 2.0
             samples, achieved = _limit_and_trim(

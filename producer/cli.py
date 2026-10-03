@@ -647,7 +647,9 @@ def dashboard(
 @cli.command()
 @click.option("--source", required=True, type=EXISTING_FILE,
               help="The track to render — a full mix with its beat, or a bare vocal.")
-@click.option("--reference", required=True, type=EXISTING_FILE, help="Reference to master against.")
+@click.option("--reference", type=EXISTING_FILE,
+              help="Reference to match tone and loudness against. Without one, only "
+                   "loudness is set and the tone is left untouched.")
 @click.option("--out-dir", required=True, type=OUT_DIR, help="Where the versions are written.")
 @click.option("--target", "targets", multiple=True,
               help=f"Standard to render for; repeatable. Default: {', '.join(DEFAULT_TARGETS)}.")
@@ -658,7 +660,7 @@ def dashboard(
 @click.option("--params", "params_path", type=EXISTING_FILE, help="Fitted chain settings.")
 @click.option("--no-original", is_flag=True, help="Leave the unprocessed source out.")
 def shootout(
-    source: Path, reference: Path, out_dir: Path, targets: tuple[str, ...],
+    source: Path, reference: Path | None, out_dir: Path, targets: tuple[str, ...],
     kind: str | None, competitors: tuple[Path, ...], params_path: Path | None,
     no_original: bool,
 ) -> None:
@@ -679,6 +681,8 @@ def shootout(
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
 
+    if not result["tonal_matching"]:
+        click.secho("No reference given — setting loudness only, tone untouched.", fg="yellow")
     click.echo(f"Detected {result['kind']}; vocal chain "
                + ("applied." if result["vocal_chain_applied"]
                   else "skipped — it would thin a full track's low end."))

@@ -87,6 +87,12 @@ def test_a_vocal_fundamental_is_not_mistaken_for_a_full_mix() -> None:
     assert classify_kind({"sub": -117.0, "low": -0.4}) == VOCAL_ONLY
 
 
+def test_real_mixes_measured_around_minus_31_db_sub_read_as_full_mix() -> None:
+    """Calibrated against two real finished tracks, not synthetic fixtures."""
+    assert classify_kind({"sub": -31.0, "low": -4.0}) == FULL_MIX
+    assert classify_kind({"sub": -33.0, "low": -4.0}) == FULL_MIX
+
+
 def test_library_roundtrip_and_idempotent_add(tmp_path: Path, corpus: Path) -> None:
     lib = Library()
     entry = analyze_reference(corpus / "soul_0.wav", genre="soul")

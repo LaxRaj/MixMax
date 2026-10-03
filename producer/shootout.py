@@ -13,7 +13,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from producer.benchmark import measure
-from producer.library import FULL_MIX, VOCAL_ONLY, classify_kind
+from producer.library import FULL_MIX, VOCAL_ONLY, classify_track
 from producer.loudness import LoudnessResult, normalize_to_target
 from producer.mastering import master_track
 from producer.mix import DEFAULT_PARAMS, ChainParams
@@ -76,19 +76,19 @@ def parse_target(token: str, table: dict[str, Standard]) -> tuple[str, float, fl
 
 
 def detect_kind(path: str | Path) -> str:
-    """Full mix or bare vocal, from low-end energy.
+    """Full mix or bare vocal.
 
     This decides whether the vocal chain runs at all: its 80 Hz highpass and
     de-ess are right for a lone voice and actively wrong for a full track,
     where they would thin the kick and bass.
     """
-    return classify_kind(measure(path)["band_balance_db"])
+    return classify_track(path)[0]
 
 
 def build_shootout(
     source: str | Path,
-    reference: str | Path,
     out_dir: str | Path,
+    reference: str | Path | None = None,
     targets: tuple[str, ...] = DEFAULT_TARGETS,
     kind: str | None = None,
     params: ChainParams = DEFAULT_PARAMS,
@@ -97,7 +97,8 @@ def build_shootout(
     standards: dict[str, Standard] | None = None,
 ) -> dict:
     """Render `source` once per target, plus the chain's own output."""
-    source, reference, out_dir = Path(source), Path(reference), Path(out_dir)
+    source, out_dir = Path(source), Path(out_dir)
+    reference = Path(reference) if reference else None
     out_dir.mkdir(parents=True, exist_ok=True)
     table = standards if standards is not None else load_standards()
 
@@ -112,7 +113,15 @@ def build_shootout(
             mix_vocal(source, staged, params)
 
         as_is = out_dir / f"{AS_IS}.wav"
-        master_track(staged, reference, as_is)
+        if reference is not None:
+            master_track(staged, reference, as_is)
+        else:
+            # No reference means no tonal matching. Loudness is still worth
+            # fixing, and inventing an EQ curve from nothing would be guessing
+            # at the one thing a reference exists to decide.
+            import shutil
+
+            shutil.copyfile(staged, as_is)
         versions.append(ShootoutVersion(name=AS_IS, path=as_is, target_lufs=None))
 
         for name, target_lufs, ceiling in resolved:
@@ -149,7 +158,8 @@ def build_shootout(
 
     return {
         "source": str(source),
-        "reference": str(reference),
+        "reference": str(reference) if reference else None,
+        "tonal_matching": reference is not None,
         "kind": kind,
         "vocal_chain_applied": kind == VOCAL_ONLY,
         "versions": [v.to_dict() for v in versions],
@@ -167,7 +177,10 @@ def build_shootout_report(result: dict) -> str:
     lines = [
         "# Loudness shootout",
         "",
-        f"Source: `{Path(result['source']).name}` — detected as **{result['kind']}**"
+        ("" if result.get("tonal_matching", True) else
+         "> No reference supplied, so loudness was set but tone was left alone.\n"
+         "> Supply one to enable reference matching.\n\n")
+        + f"Source: `{Path(result['source']).name}` — detected as **{result['kind']}**"
         + (", vocal chain applied." if result["vocal_chain_applied"]
            else ", vocal chain skipped (it would thin the low end of a full track)."),
         "",

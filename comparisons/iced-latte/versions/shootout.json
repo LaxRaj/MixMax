@@ -1,0 +1,80 @@
+{
+  "source": "comparisons/iced-latte/original.wav",
+  "reference": null,
+  "tonal_matching": false,
+  "kind": "full-mix",
+  "vocal_chain_applied": false,
+  "versions": [
+    {
+      "name": "as_is",
+      "path": "comparisons/iced-latte/versions/as_is.wav",
+      "target_lufs": null,
+      "loudness": null,
+      "lufs": -23.61,
+      "true_peak_dbtp": -4.87,
+      "crest_factor_db": 18.77,
+      "lra": 4.6
+    },
+    {
+      "name": "loud_8",
+      "path": "comparisons/iced-latte/versions/loud_8.wav",
+      "target_lufs": -8.0,
+      "loudness": {
+        "target_lufs": -8.0,
+        "achieved_lufs": -8.62,
+        "true_peak_dbtp": -1.0,
+        "gain_applied_db": 39.87,
+        "limited": true,
+        "passes": 12,
+        "on_target": false
+      },
+      "lufs": -8.62,
+      "true_peak_dbtp": -1.0,
+      "crest_factor_db": 5.57,
+      "lra": 1.16
+    },
+    {
+      "name": "spotify",
+      "path": "comparisons/iced-latte/versions/spotify.wav",
+      "target_lufs": -14.0,
+      "loudness": {
+        "target_lufs": -14.0,
+        "achieved_lufs": -14.12,
+        "true_peak_dbtp": -1.0,
+        "gain_applied_db": 12.31,
+        "limited": true,
+        "passes": 6,
+        "on_target": true
+      },
+      "lufs": -14.12,
+      "true_peak_dbtp": -1.0,
+      "crest_factor_db": 12.23,
+      "lra": 1.98
+    },
+    {
+      "name": "apple_music",
+      "path": "comparisons/iced-latte/versions/apple_music.wav",
+      "target_lufs": -16.0,
+      "loudness": {
+        "target_lufs": -16.0,
+        "achieved_lufs": -16.01,
+        "true_peak_dbtp": -1.0,
+        "gain_applied_db": 7.25,
+        "limited": true,
+        "passes": 5,
+        "on_target": true
+      },
+      "lufs": -16.01,
+      "true_peak_dbtp": -1.0,
+      "crest_factor_db": 14.57,
+      "lra": 3.03
+    }
+  ],
+  "differs_in_processing": true,
+  "limited_versions": [
+    "loud_8",
+    "spotify",
+    "apple_music"
+  ],
+  "identical_after_matching": []
+}

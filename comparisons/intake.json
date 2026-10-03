@@ -1,0 +1,48 @@
+[
+  {
+    "source_file": "vocals/Iced Latte.m4a",
+    "slug": "iced-latte",
+    "verdict": "caution",
+    "blockers": [],
+    "warnings": [
+      "Noise floor at -37.68 dBFS \u2014 audible hiss or room tone. Compression will bring it forward."
+    ],
+    "metrics": {
+      "duration_s": 117.52,
+      "sample_rate": 48000,
+      "channels": 1,
+      "peak_dbfs": -4.88,
+      "clipping_runs": 0,
+      "dc_offset": 0.0,
+      "noise_floor_dbfs": -37.68,
+      "snr_db": 32.8,
+      "leading_silence_s": 0.05,
+      "trailing_silence_s": 0.0,
+      "dual_mono": false
+    },
+    "standardized_path": "comparisons/iced-latte/original.wav"
+  },
+  {
+    "source_file": "vocals/Sector 79 60.m4a",
+    "slug": "sector-79-60",
+    "verdict": "caution",
+    "blockers": [],
+    "warnings": [
+      "Noise floor at -36.47 dBFS \u2014 audible hiss or room tone. Compression will bring it forward."
+    ],
+    "metrics": {
+      "duration_s": 145.68,
+      "sample_rate": 48000,
+      "channels": 1,
+      "peak_dbfs": -1.31,
+      "clipping_runs": 0,
+      "dc_offset": -0.0,
+      "noise_floor_dbfs": -36.47,
+      "snr_db": 35.16,
+      "leading_silence_s": 0.05,
+      "trailing_silence_s": 0.0,
+      "dual_mono": false
+    },
+    "standardized_path": "comparisons/sector-79-60/original.wav"
+  }
+]

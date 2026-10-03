@@ -34,9 +34,13 @@ def _track(seconds: float = 14.0, bass: float = 0.8, amp: float = 0.4) -> np.nda
 
 
 def _vocal(seconds: float = 14.0) -> np.ndarray:
+    """A sung line with breaths between phrases, and no low end under it."""
     t = np.linspace(0, seconds, int(SR * seconds), endpoint=False)
     phase = np.cumsum(2 * np.pi * (220 + 4 * np.sin(2 * np.pi * 5 * t)) / SR)
-    return (0.4 * (np.sin(phase) + 0.3 * np.sin(2 * phase)) / 1.3).astype(np.float32)
+    tone = 0.4 * (np.sin(phase) + 0.3 * np.sin(2 * phase)) / 1.3
+    # Four-second phrases with a gap after each -- what the continuity test reads.
+    gate = ((t % 4.0) < 2.6).astype(np.float32)
+    return (tone * gate).astype(np.float32)
 
 
 @pytest.fixture()
@@ -59,6 +63,16 @@ def test_hits_every_target(tmp_path: Path, target: float) -> None:
     sf.write(str(src), _track(), SR)
     result = normalize_to_target(src, tmp_path / "out.wav", target)
     assert abs(result.achieved_lufs - target) <= TOLERANCE_LU, result.to_dict()
+
+
+@pytest.mark.parametrize("target", [-14.0, -16.0])
+def test_never_overshoots_a_published_target(tmp_path: Path, target: float) -> None:
+    """Landing above -14 LUFS trips Spotify's stricter -2 dBTP ceiling, so a
+    master that misses on the loud side fails a rule it would otherwise pass."""
+    src = tmp_path / "a.wav"
+    sf.write(str(src), _track(), SR)
+    result = normalize_to_target(src, tmp_path / "out.wav", target)
+    assert result.achieved_lufs <= target + 0.05, result.to_dict()
 
 
 @pytest.mark.parametrize("target", [-6.0, -10.0, -14.0, -20.0])
@@ -127,7 +141,9 @@ def test_bare_vocal_still_gets_the_vocal_chain(tmp_path: Path) -> None:
     sf.write(str(source), _vocal(), SR)
     sf.write(str(reference), _vocal() * 1.3, SR)
 
-    result = build_shootout(source, reference, tmp_path / "out", targets=("spotify",))
+    result = build_shootout(
+        source=source, reference=reference, out_dir=tmp_path / "out", targets=("spotify",)
+    )
     assert result["kind"] == VOCAL_ONLY
     assert result["vocal_chain_applied"] is True
 
@@ -166,6 +182,17 @@ def test_competitors_are_carried_through(tmp_path: Path, rig: dict) -> None:
     result = build_shootout(**rig, targets=("spotify",), competitors={"landr": rival})
     assert "landr" in [v["name"] for v in result["versions"]]
     assert (rig["out_dir"] / "landr.wav").exists()
+
+
+def test_reference_is_optional(tmp_path: Path, rig: dict) -> None:
+    """Without one, loudness is still worth fixing; tone is left alone."""
+    result = build_shootout(
+        source=rig["source"], out_dir=tmp_path / "noref", targets=("spotify",)
+    )
+    assert result["tonal_matching"] is False
+    assert result["reference"] is None
+    assert (tmp_path / "noref" / "spotify.wav").stat().st_size > 0
+    assert "tone was left alone" in build_shootout_report(result)
 
 
 def test_unknown_target_is_refused(rig: dict) -> None:

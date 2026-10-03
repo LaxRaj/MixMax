@@ -31,14 +31,26 @@ MINOR_PROFILE = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 
 
 # Only a kick and bass put real energy below 60 Hz. The `low` band (60-250 Hz)
 # is where a *vocal's own fundamental* lives -- 85-255 Hz covers most singers --
-# so judging on it marks every bare vocal as a full mix. Measured on fixtures:
-# a bare vocal sits near -117 dB in `sub`, a full track near -4 dB.
+# so judging on it marks every bare vocal as a full mix.
 #
-# This matters because mastering a lone vocal toward a full-mix reference asks
-# matchering to invent bass that was never recorded.
+# The threshold here was first set from synthetic fixtures, where a sine vocal
+# measured -117 dB in `sub` and a full track -4 dB. Real recordings are far
+# closer together: actual finished mixes have measured around -31 dB, because a
+# real room, mic and arrangement put energy everywhere. A -30 dB threshold read
+# those as bare vocals, which would have run the vocal chain's 80 Hz highpass
+# and de-ess over a finished mix and thinned it.
+#
+# So the band test is deliberately loose now, and `classify_track` below uses a
+# second, far more robust signal when the audio itself is available.
 FULL_MIX = "full-mix"
 VOCAL_ONLY = "vocal-only"
-SUB_FULL_MIX_DB = -30.0
+SUB_FULL_MIX_DB = -45.0
+
+# An unaccompanied vocal stops between phrases; a full mix does not. Measured on
+# two real finished tracks: 0.2% and 0.4% of frames near-silent. A bare vocal
+# runs far higher, and this separates them much more cleanly than spectrum does.
+CONTINUOUS_IF_QUIET_BELOW = 0.06
+QUIET_FRAME_DB_BELOW_PEAK = 30.0
 
 # Only analyse this much of each track. Enough to characterise it, and it keeps
 # ingesting a few hundred songs to minutes rather than an afternoon.
@@ -90,6 +102,40 @@ def classify_kind(band_balance: dict[str, float]) -> str:
     """Guess whether a track is a full mix or a bare vocal, from its sub energy."""
     sub = band_balance.get("sub", -120.0)
     return FULL_MIX if sub >= SUB_FULL_MIX_DB else VOCAL_ONLY
+
+
+def _quiet_fraction(path: str | Path) -> float:
+    """Share of frames sitting well below the track's own loud passages."""
+    track = Track.load(path)
+    rms = librosa.feature.rms(y=np.ascontiguousarray(track.mono(), dtype=np.float32))[0]
+    db = 20.0 * np.log10(np.maximum(rms, 1e-9))
+    if db.size == 0:
+        return 0.0
+    return float(np.mean(db < np.percentile(db, 95) - QUIET_FRAME_DB_BELOW_PEAK))
+
+
+def classify_track(path: str | Path) -> tuple[str, str]:
+    """Full mix or bare vocal, using both spectrum and continuity.
+
+    Returns (kind, why). Continuity is the stronger signal: a singer stops to
+    breathe and between phrases, where an arrangement keeps playing. Spectrum
+    alone proved unreliable on real recordings, which carry room energy a
+    synthetic fixture does not.
+    """
+    sub = measure(path)["band_balance_db"].get("sub", -120.0)
+    quiet = _quiet_fraction(path)
+    continuous = quiet < CONTINUOUS_IF_QUIET_BELOW
+
+    # No sub energy is disqualifying: every full mix has a kick or a bass, so a
+    # track without one cannot be a full mix however continuously it plays.
+    if sub < SUB_FULL_MIX_DB:
+        return VOCAL_ONLY, f"almost no energy below 60 Hz ({sub:.0f} dB)"
+
+    # Low end is present, so continuity decides: an arrangement keeps playing
+    # where a singer stops to breathe and between phrases.
+    if continuous:
+        return FULL_MIX, f"plays continuously ({quiet * 100:.1f}% quiet), sub at {sub:.0f} dB"
+    return VOCAL_ONLY, f"stops between phrases ({quiet * 100:.1f}% quiet)"
 
 
 def analyze_reference(

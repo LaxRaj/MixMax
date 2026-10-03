@@ -1,0 +1,80 @@
+{
+  "source": "comparisons/sector-79-60/original.wav",
+  "reference": null,
+  "tonal_matching": false,
+  "kind": "full-mix",
+  "vocal_chain_applied": false,
+  "versions": [
+    {
+      "name": "as_is",
+      "path": "comparisons/sector-79-60/versions/as_is.wav",
+      "target_lufs": null,
+      "loudness": null,
+      "lufs": -22.72,
+      "true_peak_dbtp": -1.31,
+      "crest_factor_db": 21.57,
+      "lra": 3.47
+    },
+    {
+      "name": "loud_8",
+      "path": "comparisons/sector-79-60/versions/loud_8.wav",
+      "target_lufs": -8.0,
+      "loudness": {
+        "target_lufs": -8.0,
+        "achieved_lufs": -10.45,
+        "true_peak_dbtp": -1.0,
+        "gain_applied_db": 36.3,
+        "limited": true,
+        "passes": 12,
+        "on_target": false
+      },
+      "lufs": -10.45,
+      "true_peak_dbtp": -1.0,
+      "crest_factor_db": 5.91,
+      "lra": 1.03
+    },
+    {
+      "name": "spotify",
+      "path": "comparisons/sector-79-60/versions/spotify.wav",
+      "target_lufs": -14.0,
+      "loudness": {
+        "target_lufs": -14.0,
+        "achieved_lufs": -14.06,
+        "true_peak_dbtp": -1.0,
+        "gain_applied_db": 16.05,
+        "limited": true,
+        "passes": 4,
+        "on_target": true
+      },
+      "lufs": -14.06,
+      "true_peak_dbtp": -1.0,
+      "crest_factor_db": 11.12,
+      "lra": 1.17
+    },
+    {
+      "name": "apple_music",
+      "path": "comparisons/sector-79-60/versions/apple_music.wav",
+      "target_lufs": -16.0,
+      "loudness": {
+        "target_lufs": -16.0,
+        "achieved_lufs": -16.07,
+        "true_peak_dbtp": -1.0,
+        "gain_applied_db": 6.49,
+        "limited": true,
+        "passes": 6,
+        "on_target": true
+      },
+      "lufs": -16.07,
+      "true_peak_dbtp": -1.0,
+      "crest_factor_db": 14.15,
+      "lra": 1.88
+    }
+  ],
+  "differs_in_processing": true,
+  "limited_versions": [
+    "loud_8",
+    "spotify",
+    "apple_music"
+  ],
+  "identical_after_matching": []
+}
