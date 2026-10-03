@@ -162,8 +162,8 @@ def analyze_structure(path: str | Path) -> Structure:
     sections: list[Section] = []
     for i, (start, end) in enumerate(zip(merged[:-1], merged[1:])):
         seg = y[int(start * sr):int(end * sr)]
-        if seg.size == 0:
-            continue
+        if end - start < MIN_SECTION_S / 2 or seg.size == 0:
+            continue  # a sliver at the boundary is an artefact, not a section
         rms = float(np.sqrt(np.mean(np.square(seg, dtype=np.float64))))
         onsets = librosa.onset.onset_detect(y=seg, sr=sr, units="time")
         spectrum = np.abs(np.fft.rfft(seg))
@@ -185,14 +185,28 @@ def analyze_structure(path: str | Path) -> Structure:
 
     transitions = []
     for before, after in zip(sections[:-1], sections[1:]):
-        delta = after.energy_db - before.energy_db
-        if abs(delta) >= DROP_DB:
+        energy_delta = after.energy_db - before.energy_db
+        low_delta = after.low_energy_db - before.low_energy_db
+
+        if abs(energy_delta) >= DROP_DB:
             transitions.append({
                 "at_s": after.start_s,
                 "from_label": before.label,
                 "to_label": after.label,
-                "energy_change_db": round(delta, 2),
-                "kind": "lift" if delta > 0 else "drop",
+                "energy_change_db": round(energy_delta, 2),
+                "low_change_db": round(low_delta, 2),
+                "kind": "lift" if energy_delta > 0 else "drop",
+            })
+        elif abs(low_delta) >= LOW_END_DROP_DB:
+            # A breakdown holds its level and loses its bass. Watching energy
+            # alone misses the one transition people actually call a drop.
+            transitions.append({
+                "at_s": after.start_s,
+                "from_label": before.label,
+                "to_label": after.label,
+                "energy_change_db": round(energy_delta, 2),
+                "low_change_db": round(low_delta, 2),
+                "kind": "breakdown" if low_delta < 0 else "bass returns",
             })
 
     repetition: dict[str, int] = {}
@@ -256,7 +270,10 @@ def _arrangement_notes(
     # Judge flatness on the body: an intro and outro are supposed to be quiet,
     # and including them hides a middle that never moves.
     body = sections[1:-1] if len(sections) > 3 else sections
-    if body:
+    has_breakdown = any(t["kind"] in {"breakdown", "bass returns"} for t in transitions)
+    if body and not has_breakdown:
+        # A breakdown is movement even at a constant level, so flagging flat
+        # energy next to one would be describing the arrangement wrongly.
         spread = max(s.energy_db for s in body) - min(s.energy_db for s in body)
         if spread < BODY_FLAT_DB:
             notes.append(
@@ -314,10 +331,11 @@ def build_structure_report(structure: Structure, title: str = "Arrangement") -> 
     lines += ["", "## Transitions", ""]
     if structure.transitions:
         for t in structure.transitions:
-            arrow = "▲" if t["kind"] == "lift" else "▼"
+            arrow = {"lift": "▲", "drop": "▼", "breakdown": "◇", "bass returns": "◆"}[t["kind"]]
             lines.append(
                 f"- {arrow} **{t['kind']}** at {int(t['at_s'] // 60)}:{int(t['at_s'] % 60):02d} — "
-                f"{t['from_label']} → {t['to_label']}, {t['energy_change_db']:+.1f} dB"
+                f"{t['from_label']} → {t['to_label']}, energy {t['energy_change_db']:+.1f} dB, "
+                f"low end {t.get('low_change_db', 0):+.1f} dB"
             )
     else:
         lines.append("_No section-to-section energy change above the threshold._")

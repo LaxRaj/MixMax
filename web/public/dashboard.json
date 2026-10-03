@@ -34,12 +34,16 @@
       "slug": "iced-latte",
       "versions": [
         "MASTER",
+        "MASTER_extended",
+        "extended",
         "original"
       ],
       "has_ours": false,
       "has_reference": false,
       "competitors": [
-        "MASTER"
+        "MASTER",
+        "MASTER_extended",
+        "extended"
       ]
     },
     {

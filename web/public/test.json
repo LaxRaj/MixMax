@@ -1,19 +1,17 @@
 {
-  "slug": "iced-latte",
+  "slug": "iced-latte-bridge",
   "labels": [
     "A",
     "B",
-    "C",
-    "D"
+    "C"
   ],
   "urls": {
     "A": "/audio/A.m4a",
     "B": "/audio/B.m4a",
-    "C": "/audio/C.m4a",
-    "D": "/audio/D.m4a"
+    "C": "/audio/C.m4a"
   },
   "excerpt": {
     "start_s": 0,
-    "length_s": 60.0
+    "length_s": 50.0
   }
 }

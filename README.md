@@ -270,6 +270,38 @@ This only works where a platform raises quiet tracks. Apple Sound Check and
 YouTube only turn things down, so headroom buys nothing there and the normal
 ceiling applies.
 
+### `producer arrange` — add a bridge and extend to a full song
+
+Acts on what `structure` found. Cuts the source **on bar lines** and reassembles
+it: repeating the hook, filtering a section down into a breakdown, sweeping a
+riser into the return.
+
+```bash
+producer arrange --source mix.wav --out extended.wav --minutes 2.8
+```
+
+```
+148.0 BPM · bar 1.621s · edits snapped to bar lines
+
+role                                   from       to     len
+original body                          0.19   110.44  110.3s
+bridge (low end removed)              50.45    69.91   19.5s
+riser into the drop                   69.91    73.15    3.2s
+drop — B returns full                 32.62    50.45   17.8s
+B again                               32.62    50.45   17.8s
+outro                                110.44   117.52    7.1s
+
+1.96 min -> 2.93 min
+```
+
+**It composes nothing.** Every sample out is a sample in — moved, filtered or
+faded. A breakdown built from the track's own material is a real technique, but
+it is not the same as writing a new part.
+
+Edits snap to the bar grid, because a cut landing off the downbeat is what makes
+a rearrangement sound wrong. Joins use a 12 ms equal-power crossfade, and
+`--dry-run` prints the plan without rendering.
+
 ### `producer structure` — break the arrangement down
 
 Turning a loop into a song is an arrangement problem, not a processing one — no

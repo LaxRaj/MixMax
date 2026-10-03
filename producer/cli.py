@@ -35,6 +35,12 @@ from producer.mastering import master_track
 from producer.mix import ChainParams, DEFAULT_PARAMS, mix_vocal
 from producer.qa import DEFAULT_PROFILE, QAProfile, run_qa
 from producer.shootout import DEFAULT_TARGETS, build_shootout, build_shootout_report
+from producer.arrange import (
+    DEFAULT_BRIDGE_BARS,
+    BarGrid,
+    plan_extension,
+    render_arrangement,
+)
 from producer.structure import analyze_structure, build_structure_report
 from producer.master_chain import DEFAULT_MASTER_PARAMS, master_full_mix
 from producer.loudness import normalize_to_target
@@ -826,9 +832,12 @@ def structure(source: Path, out_path: Path | None, json_path: Path | None) -> No
     if result.transitions:
         click.echo("transitions:")
         for t in result.transitions:
-            arrow = "▲" if t["kind"] == "lift" else "▼"
-            click.echo(f"  {arrow} {t['kind']:<5} at {int(t['at_s'] // 60)}:{int(t['at_s'] % 60):02d}  "
-                       f"{t['from_label']} -> {t['to_label']}  {t['energy_change_db']:+.1f} dB")
+            arrow = {"lift": "▲", "drop": "▼", "breakdown": "◇", "bass returns": "◆"}[t["kind"]]
+            click.echo(
+                f"  {arrow} {t['kind']:<13} at {int(t['at_s'] // 60)}:{int(t['at_s'] % 60):02d}  "
+                f"{t['from_label']} -> {t['to_label']}  "
+                f"energy {t['energy_change_db']:+.1f} dB  low {t.get('low_change_db', 0):+.1f} dB"
+            )
     else:
         click.secho("transitions: none — nothing drops or builds.", fg="yellow")
 
@@ -845,3 +854,49 @@ def structure(source: Path, out_path: Path | None, json_path: Path | None) -> No
         json_path.parent.mkdir(parents=True, exist_ok=True)
         json_path.write_text(json.dumps(result.to_dict(), indent=2) + "\n")
         click.echo(f"JSON   -> {json_path}")
+
+
+@cli.command()
+@click.option("--source", required=True, type=EXISTING_FILE, help="The track to extend.")
+@click.option("--out", "out_path", required=True, type=OUT_FILE, help="Destination WAV.")
+@click.option("--minutes", default=2.8, show_default=True, type=float,
+              help="Roughly how long the result should be.")
+@click.option("--bridge-bars", default=DEFAULT_BRIDGE_BARS, show_default=True, type=float,
+              help="Length of the breakdown, in bars.")
+@click.option("--dry-run", is_flag=True, help="Show the plan without rendering.")
+def arrange(
+    source: Path, out_path: Path, minutes: float, bridge_bars: float, dry_run: bool
+) -> None:
+    """Add a bridge and a drop, and extend the track toward a full song.
+
+    This composes nothing. Every sample out is a sample in — moved, filtered or
+    faded. A breakdown built from the track's own material is a real technique,
+    but it is not the same as writing a new part.
+    """
+    structure = analyze_structure(source)
+    grid = BarGrid.from_audio(source)
+    try:
+        arrangement, why = plan_extension(
+            structure, grid, target_duration_s=minutes * 60.0, bridge_bars=bridge_bars
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(f"{grid.tempo_bpm:.1f} BPM · bar {grid.bar_s:.3f}s · edits snapped to bar lines\n")
+    click.echo(f"{'role':<34} {'from':>8} {'to':>8} {'len':>7}")
+    for segment in arrangement.segments:
+        click.echo(f"{segment.role:<34} {segment.source_start_s:>8.2f} "
+                   f"{segment.source_end_s:>8.2f} {segment.duration_s:>6.1f}s")
+    click.echo(f"\n{structure.duration_s / 60:.2f} min -> {arrangement.duration_s / 60:.2f} min")
+    for note in why:
+        click.echo(f"  - {note}")
+
+    if dry_run:
+        return
+
+    info = render_arrangement(source, arrangement, out_path)
+    click.echo(f"\nArranged -> {info['output']} ({info['duration_s'] / 60:.2f} min, "
+               f"{info['segments']} segments)")
+    click.secho(
+        "Built entirely from the source. A bridge made of existing material is a "
+        "real technique, not a new part written for the song.", fg="yellow")
