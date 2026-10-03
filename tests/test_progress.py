@@ -154,3 +154,23 @@ def test_compare_refuses_an_empty_workspace(tmp_path: Path) -> None:
     result = CliRunner().invoke(cli, ["compare", "--workspace", str(empty)])
     assert result.exit_code != 0
     assert "No tracks" in result.output
+
+
+def test_compare_does_not_shadow_the_benchmark_command(tmp_path: Path) -> None:
+    """`compare` is also a function in producer.benchmark.
+
+    Defining a CLI command of the same name rebound it, so `producer benchmark`
+    called the Click object and died on a Context TypeError.
+    """
+    import numpy as np
+    import soundfile as sf
+
+    versions = tmp_path / "versions"
+    versions.mkdir()
+    t = np.linspace(0, 6, SR * 6, endpoint=False)
+    sf.write(str(versions / "producer.wav"), (0.4 * np.sin(2 * np.pi * 220 * t)).astype(np.float32), SR)
+    sf.write(str(versions / "landr.wav"), (0.3 * np.sin(2 * np.pi * 220 * t)).astype(np.float32), SR)
+
+    result = CliRunner().invoke(cli, ["benchmark", "--versions-dir", str(versions)])
+    assert result.exit_code == 0, result.output
+    assert "Measurements" in result.output

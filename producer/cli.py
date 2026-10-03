@@ -903,11 +903,14 @@ def arrange(
         "real technique, not a new part written for the song.", fg="yellow")
 
 
-@cli.command()
+# Named `compare_cmd` because `compare` is already imported from
+# producer.benchmark: shadowing it made `producer benchmark` call this Click
+# object instead, with a TypeError about Context.
+@cli.command("compare")
 @click.option("--workspace", required=True, type=IN_DIR, help="Workspace created by `intake`.")
 @click.option("--out", "out_path", type=OUT_FILE, default="web/public/compare.json",
               show_default=True, help="Where the comparison view reads its data.")
-def compare(workspace: Path, out_path: Path) -> None:
+def compare_cmd(workspace: Path, out_path: Path) -> None:
     """How finished each track is, and what is actually stopping it.
 
     A compliant master of a bare vocal is still a bare vocal, so this reports
