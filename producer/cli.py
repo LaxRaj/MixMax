@@ -41,6 +41,12 @@ from producer.arrange import (
     plan_extension,
     render_arrangement,
 )
+from producer.combine import (
+    DEFAULT_DUCK_DB,
+    DEFAULT_VOCAL_OVER_BEAT_DB,
+    combine,
+    find_offset,
+)
 from producer.progress import build_comparison
 from producer.structure import analyze_structure, build_structure_report
 from producer.master_chain import DEFAULT_MASTER_PARAMS, master_full_mix
@@ -934,3 +940,54 @@ def compare_cmd(workspace: Path, out_path: Path) -> None:
         click.echo(f"   next: {track['next_step']}")
 
     click.echo(f"\nComparison -> {out_path}")
+
+
+@cli.command("combine")
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="The vocal take.")
+@click.option("--beat", required=True, type=EXISTING_FILE, help="The instrumental.")
+@click.option("--out", "out_path", required=True, type=OUT_FILE, help="Destination WAV.")
+@click.option("--offset", "offset_s", type=float,
+              help="Seconds the vocal starts after the beat. Detected if omitted.")
+@click.option("--vocal-over-beat", "vocal_over_beat_db", default=DEFAULT_VOCAL_OVER_BEAT_DB,
+              show_default=True, type=float,
+              help="How far the vocal sits above the beat, in LU.")
+@click.option("--duck", "duck_db", default=DEFAULT_DUCK_DB, show_default=True, type=float,
+              help="How far the beat steps back under the voice. 0 disables.")
+@click.option("--check-alignment", is_flag=True, help="Report the offset and stop.")
+def combine_cmd(
+    vocal: Path, beat: Path, out_path: Path, offset_s: float | None,
+    vocal_over_beat_db: float, duck_db: float, check_alignment: bool,
+) -> None:
+    """Mix a vocal over a beat — the stage nothing else here can clear.
+
+    Lines the two up, sets the balance by loudness, and ducks the beat under
+    the words so the vocal stays intelligible.
+    """
+    if check_alignment:
+        alignment = find_offset(vocal, beat)
+        click.echo(f"Offset {alignment.offset_s:+.3f}s via {alignment.method} "
+                   f"(confidence {alignment.confidence:.2f})")
+        if not alignment.trustworthy:
+            click.secho("Too weak to trust — pass --offset yourself.", fg="yellow")
+        return
+
+    result = combine(vocal, beat, out_path, offset_s, vocal_over_beat_db, duck_db)
+    alignment = result["alignment"]
+
+    click.echo(f"Aligned {alignment['offset_s']:+.3f}s ({alignment['method']}, "
+               f"confidence {alignment['confidence']:.2f})")
+    if not alignment["trustworthy"]:
+        click.secho(
+            "Alignment confidence is low. Check the first downbeat by ear, and pass "
+            "--offset if the vocal sits early or late.", fg="yellow")
+
+    click.echo(f"Vocal {result['vocal_lufs']} LUFS, beat {result['beat_lufs']} LUFS "
+               f"-> beat {result['beat_gain_db']:+.1f} dB for a "
+               f"{result['vocal_over_beat_db']:.1f} LU gap")
+    if result["duck_db"]:
+        click.echo(f"Beat ducks {result['duck_db']:.1f} dB under the vocal")
+    if result["headroom_trim_db"]:
+        click.echo(f"Trimmed {result['headroom_trim_db']:.1f} dB to leave mastering headroom")
+    click.echo(f"\nMix -> {result['output']} ({result['duration_s'] / 60:.2f} min)")
+    click.echo("Next:  producer deliver --source "
+               f"{out_path} --out MASTER.wav --lufs -16")

@@ -106,7 +106,15 @@ def track_progress(song_dir: str | Path) -> TrackProgress:
     )
     extended = song_dir / "extended.wav"
     mixed = song_dir / "vocal_mixed.wav"
-    final = master or (extended if extended.exists() else source)
+    # A vocal placed over a beat is no longer blocked on one.
+    combined = song_dir / "with_beat.wav"
+    beat_file = next(
+        (p for p in song_dir.glob("beat.*")
+         if p.suffix.lower() in {".wav", ".mp3", ".flac", ".aiff", ".m4a"}),
+        None,
+    )
+    final = master or (extended if extended.exists() else
+                       combined if combined.exists() else source)
     final_m = measure(final)
 
     stages: list[Stage] = [
@@ -126,12 +134,24 @@ def track_progress(song_dir: str | Path) -> TrackProgress:
         else:
             stages.append(Stage("vocal", "Vocal production", "todo",
                                 "no vocal chain run yet", "producer mix --params ..."))
-        stages.append(Stage(
-            "backing", "Backing track", "blocked",
-            "there is no instrumental under this vocal",
-            "A beat has to be written, bought or licensed. Nothing here can "
-            "generate one, and a vocal without music is not a song.",
-        ))
+        if combined.exists():
+            stages.append(Stage(
+                "backing", "Backing track", "done",
+                f"vocal mixed over {beat_file.name if beat_file else 'a beat'}",
+            ))
+        elif beat_file is not None:
+            stages.append(Stage(
+                "backing", "Backing track", "partial",
+                f"{beat_file.name} is here but the vocal is not over it yet",
+                "producer combine --vocal ... --beat ...",
+            ))
+        else:
+            stages.append(Stage(
+                "backing", "Backing track", "blocked",
+                "there is no instrumental under this vocal",
+                "A beat has to be written, bought or licensed. Nothing here can "
+                "generate one, and a vocal without music is not a song.",
+            ))
     else:
         stages.append(Stage("backing", "Backing track", "done",
                             "arrived as a finished mix, vocal already over the beat"))

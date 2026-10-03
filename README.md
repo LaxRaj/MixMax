@@ -509,6 +509,31 @@ version decodes and plays at once, switching does not restart a source or lose
 position, nothing in the DOM or network traffic reveals which version is which,
 and the exported CSV matches the schema `producer tally` reads.
 
+### `producer combine` — put a vocal over a beat
+
+The stage nothing else here can clear. Lines the two up, sets the balance by
+loudness, and ducks the beat under the words.
+
+```bash
+producer combine --vocal vocal.wav --beat beat.wav --out with_beat.wav --offset 0
+```
+
+```
+Vocal -16.3 LUFS, beat -18.2 LUFS -> beat -2.1 dB for a 4.0 LU gap
+Beat ducks 2.5 dB under the vocal
+Trimmed -1.0 dB to leave mastering headroom
+```
+
+**Alignment is a suggestion, never applied on a guess.** A loop-based beat
+repeats, so onset correlation is ambiguous modulo the loop — it will happily
+return an offset four bars out. Confidence is measured peak-to-sidelobe (how
+far the best lag beats the best *rival* lag), and anything weak falls back to
+offset 0, which is correct for a vocal and beat exported from the same DAW
+timeline. Use `--check-alignment` to see the suggestion, `--offset` to set it.
+
+Ducking is a hand-built sidechain — pedalboard has no key input — using an
+envelope follower that is quick to duck and slow to let go.
+
 ### `producer compare` — how finished is each song
 
 A compliant master of a bare vocal is still a bare vocal. This tracks

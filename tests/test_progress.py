@@ -174,3 +174,20 @@ def test_compare_does_not_shadow_the_benchmark_command(tmp_path: Path) -> None:
     result = CliRunner().invoke(cli, ["benchmark", "--versions-dir", str(versions)])
     assert result.exit_code == 0, result.output
     assert "Measurements" in result.output
+
+
+def test_a_vocal_over_a_beat_clears_the_backing_stage(workspace: Path) -> None:
+    """The stage `producer combine` exists to unblock."""
+    import shutil
+
+    song = workspace / "just-vocals"
+    shutil.copyfile(workspace / "full-song" / "original.wav", song / "beat.wav")
+
+    waiting = next(s for s in track_progress(song).stages if s.key == "backing")
+    assert waiting.state == "partial"
+    assert "not over it yet" in waiting.detail
+
+    shutil.copyfile(workspace / "full-song" / "original.wav", song / "with_beat.wav")
+    done = next(s for s in track_progress(song).stages if s.key == "backing")
+    assert done.state == "done"
+    assert "beat.wav" in done.detail
