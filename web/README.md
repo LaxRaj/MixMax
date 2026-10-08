@@ -100,33 +100,47 @@ is told, and picks a version.
 Projects live in the store under `projects/<id>/`, next to anything imported or
 recorded into them. Deleting a project deletes those files too.
 
-## Hosting it
+## Sharing it with a friend
 
-It is a Vercel project, `mixmax-studio`, with a private Blob store of the same
-name. `web/.env.local` (written by `vercel env pull`, not committed) holds the
-blob token and the passcode; `producer sync` and `npm run dev` both use the
-hosted store whenever that file has `BLOB_READ_WRITE_TOKEN` in it.
+From the repo root:
 
 ```bash
-vercel                 # preview deploy — behind Vercel login, so only you can open it
-vercel --prod          # production: https://mixmax-studio.vercel.app, behind the passcode
-vercel env pull .env.local   # after changing an env var
+./studio.sh
 ```
 
-A friend needs the **production** URL: preview deployments sit behind Vercel's
-own login, which they do not have. Keep `producer sync --watch` running on the
-Mac while people use it.
+That builds the app, starts it with `producer sync --watch`, and opens a
+Cloudflare tunnel. It prints a public `https://….trycloudflare.com` link and
+the passcode; send both. Ctrl-C stops all three.
 
-To go back to a purely local store for a session:
+Everything stays on this Mac — the store is `web/.data/` — so there is no
+hosted storage and no quota. What that costs:
+
+- The link only works while `studio.sh` is running.
+- It is a **new link every time** you start it. A fixed address needs a
+  Cloudflare account and a domain (a named tunnel), or Tailscale Funnel.
+- Uploads through the tunnel are capped at 100 MB per file by Cloudflare.
+
+The passcode comes from `MIXMAX_PASSCODE` in the environment or in
+`web/.env.local`; without one the script refuses to start.
+
+## Why not Vercel
+
+It was deployed there first (`mixmax-studio`, production branch `main`, root
+directory `web/`), and the code still supports it. But a worker that polls a
+store every few seconds does not fit the Hobby plan's Blob limits: the store
+was suspended for exceeding its quota within a day. The project and store
+still exist; the site at `mixmax-studio.vercel.app` loads but shows no songs.
+
+To go back to it you would need the Pro plan, or to move the small, chatty
+objects (notes, requests, the heartbeat) off Blob. Until then, note that
+`web/.env.local` still holds a blob token, so plain `npm run dev` and plain
+`producer sync` will try the suspended store. Use `./studio.sh`, or force the
+local folder:
 
 ```bash
 MIXMAX_DATA_DIR=.data npm run dev
 producer sync --store web/.data
 ```
-
-To change the passcode: `vercel env rm MIXMAX_PASSCODE`, `vercel env add
-MIXMAX_PASSCODE` for Production and Preview, then redeploy. Every existing
-session ends, because the cookie is derived from it.
 
 ## Tests
 
