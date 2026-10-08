@@ -31,3 +31,10 @@ out/
 reference_library.json
 qa_profile.json
 chain_params.json
+
+# Studio sync — caches, superseded files and render scratch stay local
+.sync/
+.replaced/
+.render/
+comparisons/uploads.json
+vocals/*/

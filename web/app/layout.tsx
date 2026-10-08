@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, Martian_Mono } from "next/font/google";
+import { IdentityProvider } from "@/components/Identity";
+import { Nav } from "@/components/Nav";
 import "./globals.css";
 
 const body = Archivo({
@@ -15,8 +17,8 @@ const mono = Martian_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Listening test",
-  description: "A short blind listening test.",
+  title: "MixMax studio",
+  description: "Songs in development: listen, leave notes, change settings, upload files.",
 };
 
 export const viewport = {
@@ -29,7 +31,12 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${body.variable} ${mono.variable}`}>{children}</body>
+      <body className={`${body.variable} ${mono.variable}`}>
+        <IdentityProvider>
+          <Nav />
+          {children}
+        </IdentityProvider>
+      </body>
     </html>
   );
 }

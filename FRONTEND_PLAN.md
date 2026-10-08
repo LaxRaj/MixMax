@@ -244,3 +244,59 @@ producer dashboard --workspace comparisons --library reference_library.json
   - [x] Covered by the Playwright suite (9 dashboard tests, desktop and phone)
 2026-10-03 — A fifth provenance tier, `reported`, sits between measured and guessed. — A widely reported platform target is weaker evidence than a published spec but far stronger than a de-ess frequency I picked; collapsing both to "guessed" misrepresented each.
 2026-10-03 — The dashboard computes nothing; it renders `dashboard.json`. — Same call as the listening test: a second implementation of any of these numbers could disagree with the CLI's.
+
+---
+
+# Part 3 — The studio
+
+> A hosted place where two people can open any song, hear each piece of it, say what they think, change how it is rendered, and send in files.
+
+- **Success metric:** A friend opens a link on a phone, leaves a note on the bridge of a song and nudges the vocal up a dB, and both show up in the repo — `feedback.md` and a new master — without a message being sent.
+- **Status:** F6 built, tested, and running as a Vercel preview against a private Blob store. Production (`mixmax-studio.vercel.app`) has not been promoted yet, and a friend cannot open a preview — see `web/README.md` → *Hosting it*.
+
+## What changed, and what did not
+
+Parts 1 and 2 both say "not an operator console" and "read-only". This reverses that, on purpose: the bottleneck stopped being the pipeline and became the conversation about the songs, which was happening in messages the project could not read.
+
+One rule survives untouched: **the CLI is the engine.** The web app still processes no audio and measures nothing. It records intent — a note, a file, a settings request — and `producer sync` on the studio Mac does the work and publishes the result.
+
+```
+browser ──► Next.js on Vercel ──► private Vercel Blob (no database)
+                                        ▲
+                     producer sync --watch      (the studio Mac: the only worker)
+                       uploads   → intake gate → vocals/, comparisons/<slug>/
+                       requests  → validate → re-render from the stage they touch
+                       feedback  → comparisons/<slug>/feedback.md
+                       publish   → song.json + AAC audio → the UI
+```
+
+## Milestones
+
+### [x] F6 — Songs, feedback, uploads
+
+- **Screens:** `/` songs home · `/songs/<slug>` song · `/upload` · `/listen` (the blind test, moved from `/`) · `/dashboard` (unchanged) · `/login`.
+- **Acceptance criteria:**
+  - [x] One nav reaches every screen; it is hidden on `/listen` so a blind listener sees no song names
+  - [x] Every component of a song that exists can be played, with its measured loudness, peak and length
+  - [x] A note saves itself (no submit button), can be about the whole song, a component, or a section of the arrangement, and lands in `comparisons/<slug>/feedback.md`
+  - [x] A settings change is validated twice (page and Mac), re-renders only the stages downstream of it, and its outcome is shown on the song and written to `feedback.md`
+  - [x] A failed render leaves every file as it was
+  - [x] An uploaded file is checked by the same intake gate as the CLI; every problem is shown on `/upload`, badged in the nav, printed by `producer sync`, and kept in `comparisons/UPLOAD_LOG.md`
+  - [x] An upload never overwrites a song's vocal or beat unless it was sent as a replacement from that song; a replaced file is moved to `.replaced/`, never deleted
+  - [x] The UI says plainly when the studio Mac is not syncing
+  - [x] Everything except `/listen` is behind one shared passcode; a deployment with no passcode set refuses to serve rather than serving openly
+  - [x] 29 Python tests and 28 Playwright tests (×2 viewports)
+  - [x] Preview deployed to Vercel with a private Blob store; login, songs, audio (presigned, with byte ranges), notes and direct-to-Blob uploads all checked against it
+  - [ ] Promoted to production — **not done**, waiting on the operator
+  - [ ] Used from a real phone over the hosted URL — **not tested**
+
+2026-10-07 — The studio reverses "not an operator console" and "read-only". — The pipeline works; what was missing was a record of what two people think of each song, and a way for the second person to act on it.
+2026-10-07 — The web app queues settings changes; it never renders. — A second implementation of the chain in the browser would produce numbers that disagree with the CLI's. The cost is that nothing happens while the Mac is off, so the UI says when it is.
+2026-10-07 — Settings nobody chose are shown as "not recorded", not as fact. — The existing masters were made from the CLI before `settings.json` existed, so the balance and arrangement values that produced them are unknown. Displaying the default as if it were the value in force would be the same mistake the evidence ledger exists to catch.
+2026-10-07 — A stage re-renders only if its output already exists or the change names it. — Changing the vocal chain should refresh the master built on it, not conjure an extended cut nobody asked for.
+2026-10-07 — Renders go to a scratch folder and are moved in only when every stage succeeds. — A half-applied change would leave a master that matches no recorded settings.
+2026-10-07 — `feedback.md` is rebuilt from all notes on every sync, never appended to. — Notes are edited and deleted; a deterministic rebuild makes re-running sync safe and keeps the file a faithful view of the store.
+2026-10-07 — An upload from the Upload screen cannot replace a song's vocal or beat. — Replacement is destructive to everything downstream, so it has to be asked for from the song itself.
+2026-10-07 — The browser's pre-upload check treats "could not decode" as a caution, not a blocker. — Browsers disagree about AIFF, FLAC and CAF; refusing a good file because Chrome cannot open it would be a false alarm. The intake gate on the Mac is the authority.
+2026-10-07 — The song screen streams audio; it does not decode it up front like the blind test. — Gapless switching is what the blind test is for. Here one component plays at a time and a three-minute master should start at once on a phone.
+2026-10-07 — One shared passcode, and a name typed once per browser. — Two friends do not need accounts; they need notes that say who wrote them.

@@ -1,315 +1,135 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Player } from "@/components/Player";
-import { Ranker } from "@/components/Ranker";
-import styles from "@/components/Form.module.css";
-import { downloadCsv, toCsv, type LabelResponse } from "@/lib/csv";
-import {
-  assertBlind,
-  requestedSlug,
-  type Manifest,
-  type TestSummary,
-} from "@/lib/manifest";
-import { useBlindPlayer } from "@/lib/useBlindPlayer";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import styles from "@/components/studio.module.css";
+import { STATE_COPY } from "@/lib/compare";
+import { ago, clock, isLive, type Heartbeat, type SongSummary } from "@/lib/song";
 
-export default function Page() {
-  const [manifest, setManifest] = useState<Manifest | null>(null);
-  const [choices, setChoices] = useState<TestSummary[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+type Home = { songs: SongSummary[]; heartbeat: Heartbeat; published: boolean };
+
+export default function SongsPage() {
+  const [data, setData] = useState<Home | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const slug = requestedSlug();
-
-    // A named test loads directly. Without one, offer what is published —
-    // one deployment can host several listening tests at a time.
-    const load = slug
-      ? fetch(`/tests/${slug}.json`).then((r) => {
-          if (!r.ok) throw new Error(`No test called "${slug}" (${r.status})`);
-          return r.json().then((data: Manifest) => {
-            assertBlind(data);
-            setManifest(data);
-          });
-        })
-      : fetch("/tests/index.json")
-          .then((r) => (r.ok ? r.json() : Promise.reject(new Error("No tests published"))))
-          .then((data: { tests: TestSummary[] }) => {
-            if (data.tests.length === 1) {
-              return fetch(`/tests/${data.tests[0].slug}.json`)
-                .then((r) => r.json())
-                .then((only: Manifest) => {
-                  assertBlind(only);
-                  setManifest(only);
-                });
-            }
-            setChoices(data.tests);
-          });
-
-    load.catch((err: Error) => setLoadError(err.message));
+    document.title = "Songs — MixMax studio";
+    let alive = true;
+    const load = () =>
+      fetch("/api/songs")
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Could not load songs (${r.status})`))))
+        .then((next: Home) => alive && setData(next))
+        .catch((e: Error) => alive && setError(e.message));
+    load();
+    const timer = window.setInterval(load, 20_000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
   }, []);
 
-  if (loadError) {
+  if (error && !data) {
     return (
       <main className={styles.page}>
-        <div className={styles.lede}>
-          <h1>Nothing to listen to</h1>
-          <p>{loadError}</p>
+        <div className={styles.head}>
+          <p className={styles.eyebrow}>Songs</p>
+          <h1>Could not load</h1>
+          <p>{error}</p>
         </div>
       </main>
     );
   }
-
-  if (choices) {
+  if (!data) {
     return (
       <main className={styles.page}>
-        <div className={`${styles.lede} rise`}>
-          <h1>Two things to listen to</h1>
-          <p>Each takes about five minutes. Pick either — they&apos;re independent.</p>
-        </div>
-        <div className={styles.chooser}>
-          {choices.map((test) => (
-            <a key={test.slug} className={styles.choice} href={`/?test=${test.slug}`}>
-              <span className={styles.choiceTitle}>{test.title}</span>
-              <span className={styles.choiceBlurb}>{test.blurb}</span>
-              <span className={styles.choiceMeta}>
-                {test.labels} versions · {Math.round(test.length_s)}s each
-              </span>
-            </a>
-          ))}
-        </div>
-      </main>
-    );
-  }
-
-  if (!manifest) {
-    return (
-      <main className={styles.page}>
-        <p style={{ color: "var(--text-faint)" }}>Loading…</p>
-      </main>
-    );
-  }
-
-  return <Test manifest={manifest} />;
-}
-
-function Test({ manifest }: { manifest: Manifest }) {
-  const player = useBlindPlayer(manifest);
-  const labels = manifest.labels;
-  // One version is not a comparison: there is nothing to switch between, the
-  // volume-matching note is irrelevant, and a ranking of one is meaningless.
-  const single = labels.length === 1;
-
-  const [listener, setListener] = useState("");
-  const [headphones, setHeadphones] = useState(false);
-  const [scores, setScores] = useState<Record<string, number | null>>(() =>
-    Object.fromEntries(labels.map((l) => [l, null])),
-  );
-  const [notes, setNotes] = useState<Record<string, string>>(() =>
-    Object.fromEntries(labels.map((l) => [l, ""])),
-  );
-  const [ranking, setRanking] = useState<string[]>(labels);
-  const title = manifest.title ?? (single ? "Have a listen" : "Which of these sounds finished?");
-  const blurb = manifest.blurb;
-  const [submitted, setSubmitted] = useState(false);
-
-  // Space toggles, number keys switch version -- the comparison should never
-  // require looking away from what you are hearing.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-
-      if (e.code === "Space") {
-        e.preventDefault();
-        void player.toggle();
-        return;
-      }
-      const index = Number(e.key) - 1;
-      if (Number.isInteger(index) && index >= 0 && index < labels.length) {
-        e.preventDefault();
-        player.select(labels[index]);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [labels, player]);
-
-  const missing = useMemo(() => {
-    const unscored = labels.filter((l) => scores[l] === null);
-    const problems: string[] = [];
-    if (!listener.trim()) problems.push("your name");
-    if (unscored.length) problems.push(`a score for ${unscored.join(", ")}`);
-    return problems;
-  }, [labels, listener, scores]);
-
-  const submit = useCallback(() => {
-    const responses: LabelResponse[] = labels.map((label) => ({
-      label,
-      score: scores[label],
-      notes: notes[label],
-    }));
-    const csv = toCsv({
-      slug: manifest.slug,
-      listener: listener.trim(),
-      headphones,
-      responses,
-      ranking,
-      switchCount: player.switchCount,
-    });
-    downloadCsv(`${manifest.slug}-${listener.trim().toLowerCase().replace(/\s+/g, "-")}.csv`, csv);
-    setSubmitted(true);
-  }, [headphones, labels, listener, manifest.slug, notes, player.switchCount, ranking, scores]);
-
-  if (submitted) {
-    return (
-      <main className={styles.page}>
-        <div className={`${styles.done} rise`}>
-          <h2>Thank you</h2>
-          <p>
-            Your scoresheet has been downloaded. Send that file back and you&apos;re done — it
-            drops straight into the results.
-          </p>
-          <div className={styles.actions}>
-            <button className={styles.ghost} onClick={() => setSubmitted(false)}>
-              Back to the test
-            </button>
-          </div>
-        </div>
+        <p className={styles.muted}>Loading…</p>
       </main>
     );
   }
 
   return (
-    <>
-      <Player player={player} labels={labels} />
+    <main className={styles.page}>
+      <header className={`${styles.head} rise`}>
+        <p className={styles.eyebrow}>Songs</p>
+        <h1>What we&apos;re working on</h1>
+        <p>
+          Open a song to hear each piece of it, leave notes, change how it&apos;s mixed, or swap a
+          file. Everything you say is kept with the song.
+        </p>
+      </header>
 
-      <main className={styles.page}>
-        <div className={`${styles.lede} rise`}>
-          <h1>{title}</h1>
+      {!isLive(data.heartbeat) && data.songs.length > 0 && (
+        <p className={styles.notice}>
+          <strong>The studio Mac is not syncing right now</strong>
+          {data.heartbeat ? ` — last seen ${ago(data.heartbeat.at)}.` : "."} You can still listen
+          and leave notes. New renders and file checks wait until it is back.
+        </p>
+      )}
+
+      {data.songs.length === 0 ? (
+        <div className={styles.empty}>
           <p>
-            {blurb ??
-              (single
-                ? "The full track, start to finish. It loops."
-                : `${labels.length} versions of the same recording, processed differently. About five minutes.`)}
+            {data.published
+              ? "No songs yet. Upload a vocal to start one."
+              : "Nothing has been published yet. On the studio Mac, run:"}
           </p>
-          <div className={styles.note}>
-            {single ? (
-              <>
-                Headphones or real speakers if you can — laptop speakers hide most of what
-                matters. Scroll down to score it and leave notes.
-              </>
-            ) : (
-              <>
-                They&apos;re volume-matched, so you&apos;re judging the sound and not which is
-                loudest, and the names are meaningless on purpose. Headphones or real speakers
-                if you can — laptop speakers hide most of what&apos;s being tested.
-              </>
-            )}
-          </div>
+          {data.published ? (
+            <Link className={styles.primary} href="/upload" style={{ display: "inline-block", textDecoration: "none" }}>
+              Upload a file
+            </Link>
+          ) : (
+            <code>producer sync --watch</code>
+          )}
         </div>
-
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <span className={styles.step}>01</span>
-            <h2>{single ? "Score it" : "Score each one"}</h2>
-          </div>
-          <p className={styles.sectionSub}>
-            {single
-              ? "Listen all the way through first. The notes box is the useful part."
-              : `Listen to all ${labels.length} before scoring. Tap a letter above to switch instantly — it keeps playing from the same spot.`}
-          </p>
-
-          {labels.map((label) => (
-            <div key={label} className={styles.card} data-active={label === player.active}>
-              <div className={styles.cardHead}>
-                <span className={styles.badge}>{label}</span>
-                {label === player.active && player.isPlaying && (
-                  <span className={styles.playing}>playing</span>
-                )}
+      ) : (
+        <div className={styles.grid}>
+          {data.songs.map((song) => (
+            <Link key={song.slug} href={`/songs/${song.slug}`} className={styles.songCard}>
+              <div>
+                <div className={styles.songTitle}>{song.title}</div>
+                <div className={styles.kind}>
+                  {song.kind === "vocal-only" ? "vocal + beat" : "finished mix"} · {clock(song.duration_s)}
+                </div>
               </div>
-
-              <div className={styles.scale} role="radiogroup" aria-label={`Score for ${label}`}>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    className={styles.dot}
-                    data-on={scores[label] === n}
-                    role="radio"
-                    aria-checked={scores[label] === n}
-                    onClick={() => setScores((s) => ({ ...s, [label]: n }))}
+              <div>
+                <div className={styles.pctRow}>
+                  <span className={styles.pctBig}>{song.percent}%</span>
+                  <span className={styles.kind}>finished</span>
+                </div>
+                <div className={styles.pctBar} style={{ marginTop: 10 }}>
+                  <div className={styles.pctFill} style={{ width: `${song.percent}%` }} />
+                </div>
+              </div>
+              <div className={styles.stageDots}>
+                {song.stages.map((stage) => (
+                  <span
+                    key={stage.key}
+                    className={styles.stageDot}
+                    data-s={stage.state}
+                    title={STATE_COPY[stage.state].label}
                   >
-                    {n}
-                  </button>
+                    {STATE_COPY[stage.state].mark} {stage.label}
+                  </span>
                 ))}
               </div>
-              <div className={styles.scaleEnds}>
-                <span>not a release</span>
-                <span>sounds finished</span>
+              <div className={styles.cardNext}>
+                <strong>Next</strong>
+                {song.next_step}
               </div>
-
-              <textarea
-                className={styles.notes}
-                placeholder="Anything you noticed — harsh, muddy, thin, boxy, squashed?"
-                value={notes[label]}
-                onChange={(e) => setNotes((n) => ({ ...n, [label]: e.target.value }))}
-              />
-            </div>
+              <div className={styles.cardFoot}>
+                <span data-on={song.notes > 0}>
+                  {song.notes === 0 ? "No notes yet" : `${song.notes} note${song.notes === 1 ? "" : "s"}`}
+                </span>
+                {song.pending > 0 && (
+                  <span data-on="true">
+                    {song.pending} change{song.pending === 1 ? "" : "s"} waiting to render
+                  </span>
+                )}
+              </div>
+            </Link>
           ))}
-        </section>
-
-        {!single && (
-          <section className={styles.section}>
-            <div className={styles.sectionHead}>
-              <span className={styles.step}>02</span>
-              <h2>Rank them</h2>
-            </div>
-            <p className={styles.sectionSub}>Best at the top. No ties.</p>
-            <Ranker ranking={ranking} onChange={setRanking} />
-          </section>
-        )}
-
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <span className={styles.step}>{single ? "02" : "03"}</span>
-            <h2>About you</h2>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="listener">Your name</label>
-            <input
-              id="listener"
-              className={styles.input}
-              value={listener}
-              onChange={(e) => setListener(e.target.value)}
-              placeholder="So we know whose notes are whose"
-              autoComplete="name"
-            />
-          </div>
-
-          <label className={styles.check}>
-            <input
-              type="checkbox"
-              checked={headphones}
-              onChange={(e) => setHeadphones(e.target.checked)}
-            />
-            I listened on headphones or proper speakers
-          </label>
-
-          <button className={styles.submit} onClick={submit} disabled={missing.length > 0}>
-            Finish and download my answers
-          </button>
-          {missing.length > 0 && (
-            <p className={styles.missing}>Still needed: {missing.join(" · ")}</p>
-          )}
-        </section>
-
-        {!single && (
-          <p className={styles.foot}>
-            Please don&apos;t try to work out which is which, or compare notes before sending —
-            that defeats the point of the letters.
-          </p>
-        )}
-      </main>
-    </>
+        </div>
+      )}
+    </main>
   );
 }

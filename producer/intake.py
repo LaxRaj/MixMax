@@ -295,6 +295,54 @@ def discover_raw(path: str | Path) -> list[Path]:
     )
 
 
+def check_file(path: str | Path, scratch_dir: Path, slug: str | None = None,
+               vocal: bool = True) -> tuple[IntakeResult, Track | None]:
+    """Run one file through the gate. Returns the verdict and the loaded audio.
+
+    `vocal=False` is for beats and reference tracks: a noise floor and a
+    signal-to-noise figure describe a recording of a voice in a room, and mean
+    nothing for a finished instrumental, so those two checks are skipped.
+    """
+    path = Path(path)
+    slug = slug or slugify(path.stem)
+    try:
+        track = load_for_intake(path, scratch_dir)
+    except IntakeError as exc:
+        return IntakeResult(
+            source_file=str(path), slug=slug, verdict=BLOCKED, blockers=[str(exc)]
+        ), None
+
+    metrics = inspect(track)
+    if not vocal:
+        metrics = {**metrics, "noise_floor_dbfs": None, "snr_db": None}
+    verdict, blockers, warnings = judge(metrics)
+    return IntakeResult(
+        source_file=str(path), slug=slug, verdict=verdict,
+        blockers=blockers, warnings=warnings, metrics=metrics,
+    ), track
+
+
+def intake_one(path: str | Path, workspace: str | Path, slug: str | None = None) -> IntakeResult:
+    """Check a single vocal and, unless it is blocked, give it a workspace slot.
+
+    `run_intake` rewrites the whole workspace's report from a folder of files.
+    This is for one file arriving on its own -- an upload -- and leaves every
+    other track, and `intake.json`, alone.
+    """
+    workspace = Path(workspace)
+    workspace.mkdir(parents=True, exist_ok=True)
+    scratch = workspace / ".scratch"
+    scratch.mkdir(exist_ok=True)
+    try:
+        result, track = check_file(path, scratch, slug)
+        if track is not None and result.verdict != BLOCKED:
+            standardized = standardize(track, workspace / result.slug / "original.wav")
+            result.standardized_path = str(standardized)
+        return result
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+
 DEFAULT_SERVICES = ("landr",)
 
 
@@ -319,23 +367,10 @@ def run_intake(
             slug, suffix = f"{slugify(path.stem)}-{suffix}", suffix + 1
         used_slugs.add(slug)
 
-        try:
-            track = load_for_intake(path, scratch)
-        except IntakeError as exc:
-            results.append(IntakeResult(
-                source_file=str(path), slug=slug, verdict=BLOCKED, blockers=[str(exc)]
-            ))
-            continue
-
-        metrics = inspect(track)
-        verdict, blockers, warnings = judge(metrics)
-        result = IntakeResult(
-            source_file=str(path), slug=slug, verdict=verdict,
-            blockers=blockers, warnings=warnings, metrics=metrics,
-        )
+        result, track = check_file(path, scratch, slug)
 
         # Blocked files get no workspace slot -- nothing downstream should run.
-        if verdict != BLOCKED:
+        if track is not None and result.verdict != BLOCKED:
             standardized = standardize(track, workspace / slug / "original.wav")
             result.standardized_path = str(standardized)
 

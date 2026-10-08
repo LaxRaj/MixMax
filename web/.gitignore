@@ -44,3 +44,8 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /blob-report/
+
+# local store shared with `producer sync` (the hosted one is Vercel Blob)
+/.data/
+/e2e/.data/
+/e2e/.auth.json

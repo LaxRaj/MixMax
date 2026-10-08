@@ -49,6 +49,9 @@ from producer.combine import (
     find_offset,
 )
 from producer.progress import build_comparison
+from producer.song import deliver_master
+from producer.store import StoreError, open_store
+from producer.sync import Syncer
 from producer.structure import analyze_structure, build_structure_report
 from producer.master_chain import DEFAULT_MASTER_PARAMS, master_full_mix
 from producer.loudness import normalize_to_target
@@ -777,27 +780,12 @@ def deliver(
             f"Unknown standard {standard_key!r}. Available: {', '.join(table)}."
         )
     standard = table[standard_key]
-    ceiling = delivery_ceiling(target_lufs, standard)
 
-    import tempfile as _tempfile
-
-    with _tempfile.TemporaryDirectory() as tmp:
-        staged = Path(tmp) / "staged.wav"
-        if no_chain:
-            import shutil
-
-            shutil.copyfile(source, staged)
-        else:
-            info = master_full_mix(source, staged, DEFAULT_MASTER_PARAMS)
-            if info["mono_source"]:
-                click.secho("Mono source — no stereo image to work with.", fg="yellow")
-
-        if reference is not None:
-            matched = Path(tmp) / "matched.wav"
-            master_track(staged, reference, matched)
-            staged = matched
-
-        result = normalize_to_target(staged, out_path, target_lufs, ceiling)
+    result, info = deliver_master(
+        source, out_path, target_lufs, standard_key, reference, chain=not no_chain
+    )
+    if info and info["mono_source"]:
+        click.secho("Mono source — no stereo image to work with.", fg="yellow")
 
     conformance = evaluate(measure_audio(out_path), standard)
     click.echo(
@@ -995,3 +983,78 @@ def combine_cmd(
     click.echo(f"\nMix -> {result['output']} ({result['duration_s'] / 60:.2f} min)")
     click.echo("Next:  producer deliver --source "
                f"{out_path} --out MASTER.wav --lufs -16")
+
+
+@cli.command("sync")
+@click.option("--workspace", default="comparisons", show_default=True, type=OUT_DIR,
+              help="Workspace created by `intake`.")
+@click.option("--vocals", "vocals_dir", default="vocals", show_default=True, type=OUT_DIR,
+              help="Where uploaded files are kept as they arrived.")
+@click.option("--store", "store_dir", type=OUT_DIR,
+              help="Use this local folder as the store instead of Vercel Blob.")
+@click.option("--watch", is_flag=True, help="Keep running, checking for new work.")
+@click.option("--interval", default=20.0, show_default=True, type=float,
+              help="Seconds between checks when watching.")
+def sync_cmd(workspace: Path, vocals_dir: Path, store_dir: Path | None,
+             watch: bool, interval: float) -> None:
+    """Do what the studio web app was asked for, and publish the result.
+
+    Checks uploaded files, applies settings requests by re-rendering, rebuilds
+    each song's feedback.md, and pushes song data and audio back for the UI.
+    The web app never processes audio; nothing happens there until this runs.
+    """
+    import time
+
+    try:
+        store = open_store(store_dir)
+    except StoreError as exc:
+        raise click.ClickException(str(exc)) from exc
+    syncer = Syncer(workspace, store, vocals_dir, log=lambda msg: click.echo(f"  {msg}"))
+    click.echo(f"Syncing {workspace} with {store.name}")
+
+    def one_pass() -> None:
+        summary = syncer.run_once()
+        for upload in summary.uploads:
+            report = upload["report"]
+            colour = {"ready": "green", "caution": "yellow", "blocked": "red"}[report["verdict"]]
+            click.secho(f"upload   {upload.get('filename')} ({report['kind']} for "
+                        f"{report['slug']}) — {report['verdict']}", fg=colour)
+        for request in summary.requests:
+            result = request["result"]
+            click.secho(
+                f"request  {request['slug']}: {result['state']}"
+                + (f" — {result['message']}" if result.get("message") else "")
+                + (f" — re-rendered {', '.join(result['rendered'])}" if result.get("rendered") else ""),
+                fg="green" if result["state"] == "done" else "red",
+            )
+        for slug, count in summary.feedback.items():
+            if summary.did_something or not watch:
+                click.echo(f"feedback {slug}: {count} note(s) -> {workspace / slug / 'feedback.md'}")
+        for slug in summary.published:
+            click.echo(f"publish  {slug}")
+        if summary.problems:
+            click.secho("\nNeeds a look:", fg="yellow", bold=True)
+            for problem in summary.problems:
+                click.secho(f"  - {problem}", fg="yellow")
+            click.echo(f"Full list: {workspace / 'UPLOAD_LOG.md'}")
+
+    if not watch:
+        try:
+            one_pass()
+        except StoreError as exc:
+            raise click.ClickException(str(exc)) from exc
+        return
+
+    click.echo(f"Watching every {interval:g}s. Ctrl-C to stop.")
+    while True:
+        try:
+            one_pass()
+        except StoreError as exc:
+            # A dropped connection should not end a long watch.
+            click.secho(f"store unreachable: {exc}", fg="red")
+        try:
+            time.sleep(interval)
+        except KeyboardInterrupt:
+            click.echo("\nStopped.")
+            return
+

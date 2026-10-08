@@ -15,7 +15,7 @@ import {
 test.describe("blind listening test", () => {
   test.beforeEach(async ({ page }) => {
     await useManifest(page, FIXTURE_MANIFEST);
-    await page.goto("/");
+    await page.goto("/listen");
   });
 
   test("the page hydrates", async ({ page }) => {
@@ -158,7 +158,7 @@ test.describe("blind listening test", () => {
 test.describe("single version", () => {
   test.beforeEach(async ({ page }) => {
     await useManifest(page, SINGLE_MANIFEST);
-    await page.goto("/");
+    await page.goto("/listen");
   });
 
   test("there is nothing to switch between, so no switcher is shown", async ({ page }) => {
@@ -208,7 +208,7 @@ test.describe("several tests published at once", () => {
 
   test("offers a choice rather than guessing", async ({ page }) => {
     await useTestIndex(page, PUBLISHED);
-    await page.goto("/");
+    await page.goto("/listen");
 
     await expect(page.getByRole("heading", { name: /two things to listen to/i })).toBeVisible();
     for (const test of PUBLISHED) {
@@ -218,15 +218,15 @@ test.describe("several tests published at once", () => {
 
   test("each choice links to its own test", async ({ page }) => {
     await useTestIndex(page, PUBLISHED);
-    await page.goto("/");
+    await page.goto("/listen");
 
     const first = page.getByRole("link").first();
-    await expect(first).toHaveAttribute("href", "/?test=one");
+    await expect(first).toHaveAttribute("href", "/listen?test=one");
   });
 
   test("a named test loads straight into the player", async ({ page }) => {
     await useManifest(page, { ...FIXTURE_MANIFEST, slug: "one", title: "First song" });
-    await page.goto("/?test=one");
+    await page.goto("/listen?test=one");
 
     await expect(page.getByRole("heading", { name: /first song/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /load the audio/i })).toBeVisible();
@@ -234,7 +234,7 @@ test.describe("several tests published at once", () => {
 
   test("an unknown test says so instead of hanging", async ({ page }) => {
     await page.route("**/tests/*.json", (route) => route.fulfill({ status: 404, body: "" }));
-    await page.goto("/?test=nope");
+    await page.goto("/listen?test=nope");
 
     await expect(page.getByRole("heading", { name: /nothing to listen to/i })).toBeVisible();
     await expect(page.getByText(/nope/)).toBeVisible();

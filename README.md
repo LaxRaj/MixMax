@@ -599,6 +599,50 @@ The page is read-only and computes nothing of its own — the CLI stays the
 engine. It also states plainly where the evidence runs out, which is still at
 the only question that matters.
 
+### `producer sync` — the studio web app's other half
+
+The studio (`web/`) lets you and a friend open a song, play each piece of it,
+leave notes, change its settings and upload files. It processes no audio. It
+records what was asked for, and this command does it:
+
+```bash
+producer sync            # one pass
+producer sync --watch    # keep going; leave this running while people use the studio
+```
+
+```
+upload   new-hook.wav (vocal for nani-ki-kahani) — caution
+request  nani-ki-kahani: done — re-rendered with_beat.wav, MASTER.wav, extended.wav, MASTER_extended.wav
+feedback nani-ki-kahani: 4 note(s) -> comparisons/nani-ki-kahani/feedback.md
+publish  nani-ki-kahani
+
+Needs a look:
+  - new-hook.wav (caution): Noise floor at -38.1 dBFS — audible hiss or room tone.
+Full list: comparisons/UPLOAD_LOG.md
+```
+
+One pass, in order:
+
+1. **Uploads** go through the same gate as `producer intake`. A blocked file is
+   reported and used for nothing. The file as it arrived is always kept under
+   `vocals/<song>/`. Replacing a song's vocal or beat only happens when it was
+   sent as a replacement from that song's screen, and the old file moves to
+   `.replaced/` rather than being deleted.
+2. **Settings requests** are checked against each field's range, then the song
+   is re-rendered from the first stage the change touches. Chosen values are
+   recorded in `comparisons/<song>/settings.json`. A render that fails changes
+   nothing.
+3. **Feedback** — every note, settings change and upload for a song is written
+   to `comparisons/<song>/feedback.md` (and `feedback.json`, which
+   `producer.feedback.load_feedback` reads). The file is rebuilt each time, so
+   edit notes in the studio, not in the file.
+4. **Publish** — measurements, settings and AAC copies of each component go
+   back to the store for the UI. Measurements always come from the WAVs.
+
+With no Vercel credentials it uses the folder `web/.data/`, which `npm run dev`
+reads too — so the whole loop runs on one machine with no account. See
+`web/README.md` for hosting it.
+
 ## The testing loop
 
 ```bash
