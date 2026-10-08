@@ -9,6 +9,7 @@ import styles from "./studio.module.css";
 
 const LINKS = [
   { href: "/", label: "Songs", match: (p: string) => p === "/" || p.startsWith("/songs") },
+  { href: "/produce", label: "Produce", match: (p: string) => p.startsWith("/produce") },
   { href: "/upload", label: "Upload", match: (p: string) => p.startsWith("/upload") },
   { href: "/listen", label: "Listening tests", match: (p: string) => p.startsWith("/listen") },
   { href: "/dashboard", label: "Pipeline", match: (p: string) => p.startsWith("/dashboard") },

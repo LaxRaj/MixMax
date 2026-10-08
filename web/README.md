@@ -1,10 +1,12 @@
 # MixMax web app
 
-Two things live here, and they have opposite audiences.
+Three things live here.
 
 - **The studio** — `/`, `/songs/<slug>`, `/upload`, `/dashboard`. For you and a
   friend, behind a passcode. Open a song, play each piece of it, leave notes,
   change how it is rendered, send in files.
+- **The workstation** — `/produce`. Also behind the passcode. Make a beat, write
+  a part, record, arrange and mix, then send the result to the studio.
 - **The blind listening test** — `/listen`. An open link for anyone, showing
   nothing but `A`, `B`, `C`.
 
@@ -58,6 +60,45 @@ studio shows its default and says so. The first re-render will use it.
 **Access is one shared passcode** (`MIXMAX_PASSCODE`) and a name typed once per
 browser. Deployed without a passcode, the studio refuses to serve at all.
 `/listen` and the audio it plays stay open.
+
+## The workstation (`/produce`)
+
+A small DAW in the browser. Add a drum track and you get a step grid with a beat
+already on it; add an instrument and you get a piano roll; add audio by
+importing a file, pulling in a piece of a song, or pressing record.
+
+| Do this | How |
+| --- | --- |
+| Play / stop | Space |
+| Back to the start | Enter |
+| Move the playhead | click the ruler |
+| Set the loop | Shift-drag the ruler, or the bar numbers in the transport; `L` toggles it |
+| Move or trim a clip | drag it, or its edges (Alt ignores snapping) |
+| Split / duplicate / delete a clip | `S` at the playhead / ⌘D / Delete |
+| Place a pattern | double-click the track's lane, or "Place at playhead" |
+| Accent / ghost a drum step | Shift-click / Alt-click |
+| Undo / redo | ⌘Z / ⇧⌘Z |
+
+**It makes audio; it still does not judge it.** Export gives a 24-bit WAV that
+is guaranteed not to clip and nothing more. Sent to the studio it is an upload
+like any other: intake checks it and `producer sync` mixes and masters it.
+
+**Send the new part, not the song.** A song's vocal in the workstation is the
+AAC copy the Mac published, so it starts unticked in the export dialog. Sent as
+a beat, your export is mixed under the lossless vocal on the Mac. It only
+*replaces* a song's current beat if you tick the box that says so.
+
+**Recording** needs https or localhost, and headphones — the microphone hears
+the speakers otherwise. Takes are stored as WAV.
+
+**Limits worth knowing.** Audio does not stretch when the tempo changes. Sounds
+are synthesized, so there is no piano or acoustic kit. A three-minute stereo
+file costs about 60 MB of memory once decoded, per file, which a phone will not
+enjoy. Two people can open one project, but they take turns: the second to save
+is told, and picks a version.
+
+Projects live in the store under `projects/<id>/`, next to anything imported or
+recorded into them. Deleting a project deletes those files too.
 
 ## Hosting it
 

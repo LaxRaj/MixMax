@@ -300,3 +300,66 @@ browser ──► Next.js on Vercel ──► private Vercel Blob (no database)
 2026-10-07 — The browser's pre-upload check treats "could not decode" as a caution, not a blocker. — Browsers disagree about AIFF, FLAC and CAF; refusing a good file because Chrome cannot open it would be a false alarm. The intake gate on the Mac is the authority.
 2026-10-07 — The song screen streams audio; it does not decode it up front like the blind test. — Gapless switching is what the blind test is for. Here one component plays at a time and a three-minute master should start at once on a phone.
 2026-10-07 — One shared passcode, and a name typed once per browser. — Two friends do not need accounts; they need notes that say who wrote them.
+
+---
+
+# Part 4 — The workstation
+
+> A place in the studio to make the music, not only to talk about it: program drums, write parts, record, cut and arrange audio, mix, and send the result to the pipeline.
+
+- **Success metric:** a beat for an existing song is built around its vocal in the browser, sent from the export dialog, and comes out of `producer sync` mixed under the lossless vocal — with nobody opening a desktop DAW.
+- **Status:** F7 built and tested in Chromium at desktop and phone sizes. **Not yet judged by ear** — every check so far is a measurement or an assertion. Not tried against the hosted Blob store, in Safari, or on a real phone.
+
+## What changed, and what did not
+
+Part 1 lists "no audio editing, no waveform scrubbing UI, no DAW features" as a non-goal and Part 3 says "the web app never processes audio". `/produce` reverses both, on purpose: until now a beat had to be made somewhere else and uploaded, so the one creative step in the whole process happened outside the project.
+
+What survives:
+
+- **The CLI is still the only thing that measures or masters.** The workstation reports no LUFS, makes no release-readiness claim, and a bounce sent to the studio goes through the same intake gate as any upload.
+- **Lossless originals stay on the studio Mac.** A song's audio in the workstation is the AAC copy `producer sync` published. It is there to build against; the export dialog leaves it out by default, so what goes back is the new part, and the pipeline mixes it with the original.
+- **No database.** A project is one JSON object in the store; imported and recorded audio sit beside it.
+
+```
+/produce/<id> ──► projects/<id>/project.json          the arrangement, rewritten on every save
+              ──► projects/<id>/media/<id>.<ext>      imported files and recorded takes
+   Export     ──► uploads/<id>/file.wav + meta.json   the normal upload path; `producer sync` takes it from here
+```
+
+## Architecture
+
+- **One scheduling function for playback and for the bounce.** `lib/daw/schedule.ts` answers "what starts between these two beats" from the project alone. Live playback asks it every 25 ms for the next 140 ms; the offline render asks it once for the whole song. They cannot drift apart because there is only one answer.
+- **Nothing is sampled.** The drum kits and the synth are oscillators and seeded noise (`lib/daw/voices.ts`), so a project needs no downloads to make sound and renders identically everywhere.
+- **Edits are pure functions** from one project to the next (`lib/daw/edit.ts`); the previous project is the undo step.
+- **Recording is raw PCM** through an audio worklet, not `MediaRecorder`, which can only produce Opus or AAC.
+
+## Milestones
+
+### [x] F7 — Workstation
+
+- **Screens:** `/produce` projects · `/produce/<id>` the workstation.
+- **Acceptance criteria:**
+  - [x] Drum machine: 8 voices, 3 kits, 1- or 2-bar step patterns with accents and ghost notes, starter beats, swing
+  - [x] Synth: piano roll, 6 presets, and every parameter of the sound editable
+  - [x] Audio: import a file, bring in any published piece of a song, or record the microphone; move, trim, split, duplicate, fade and level clips, with waveforms
+  - [x] Timeline in bars with snapping, a loop region, a metronome, tap tempo, and a playhead that follows playback
+  - [x] Mixer: volume, pan, mute, solo, 3-band EQ, reverb and echo sends per track, level meters, master limiter
+  - [x] Undo and redo for every edit; a dragged fader is one step
+  - [x] Projects save themselves; a save from a stale copy is refused and the person chooses whose version to keep
+  - [x] Export is a 24-bit, 44.1 kHz WAV held under −1 dBFS; muted tracks are left out; it can be downloaded or sent to the studio as a beat, vocal or reference for a song
+  - [x] 27 Playwright tests (×2 viewports), 10 of them on the scheduling and edit arithmetic with no browser
+  - [ ] Listened to — **not done**; nobody has judged how the kits and synth sound
+  - [ ] Hosted — **not tested** against Vercel Blob (media upload and decode-through-redirect are written but unexercised)
+  - [ ] Safari and a real phone — **not tested**
+
+## Decision log
+
+2026-10-08 — The studio gets a workstation, reversing "no DAW features". — Every beat so far was made outside the project and uploaded; the creative step was the one thing the studio could not see or share.
+2026-10-08 — The browser renders audio now, but still measures nothing. — A bounce is an input to the pipeline like any other upload. Loudness and true peak in two implementations would disagree, and the CLI's is the one with tests against references.
+2026-10-08 — A song's audio in the workstation is the published AAC, and is left out of exports by default. — Bouncing a lossy vocal and sending it back as the song would quietly replace the original with a worse copy. Send the new part; let the Mac mix it with the real one.
+2026-10-08 — The bounce keeps leading silence and trims trailing silence. — A beat has to line up with the vocal from zero; a silent tail only drags the loudness reading down.
+2026-10-08 — The bounce is turned down as a whole if it would pass −1 dBFS, and says so. — Clipping is the one fault intake blocks outright. A limiter that hides it would change the mix; a gain trim does not.
+2026-10-08 — Synthesized drums and synth, no sample library. — Samples mean licensing, hosting and a download before the first sound. The cost is range: there is no acoustic kit and no piano.
+2026-10-08 — A project is one object with a revision number, not one object per event. — Notes could be one-per-event because they are independent. An arrangement is not; two half-merged arrangements are worse than being told someone else saved first.
+2026-10-08 — Audio clips keep their length in seconds when the tempo changes. — There is no time-stretching. Stretching badly would be worse than saying a recording is the length it is.
+2026-10-08 — Patterns are shared by their clips. — Fixing the hi-hat once should fix it in every bar; "Copy" makes an independent variation.
