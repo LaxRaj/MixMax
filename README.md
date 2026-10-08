@@ -643,6 +643,10 @@ With no Vercel credentials it uses the folder `web/.data/`, which `npm run dev`
 reads too — so the whole loop runs on one machine with no account. See
 `web/README.md` for hosting it.
 
+The studio also has a workstation at `/produce` for making the beat itself —
+drums, synth, recording, arranging, mixing. What it exports arrives here as an
+ordinary upload, so `producer sync` checks, mixes and masters it like any other.
+
 ## The testing loop
 
 ```bash

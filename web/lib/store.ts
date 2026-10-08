@@ -157,6 +157,14 @@ export async function openLocal(
   };
 }
 
+/** Blob mode only: the whole object as a stream, for when a redirect will not do. */
+export async function openBlob(storePath: string): Promise<ReadableStream<Uint8Array> | null> {
+  const blob = await import("@vercel/blob");
+  const found = await blob.get(safePath(storePath), { access: ACCESS });
+  if (!found || found.statusCode !== 200) return null;
+  return found.stream;
+}
+
 /** Blob mode only: a short-lived URL the browser can stream and seek directly. */
 export async function presignedRead(storePath: string, validForMs: number): Promise<string> {
   const blob = await import("@vercel/blob");

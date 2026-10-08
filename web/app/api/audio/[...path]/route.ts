@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { bad } from "@/lib/api";
-import { isBlob, openLocal, presignedRead } from "@/lib/store";
+import { MEDIA_PATH } from "@/lib/daw/types";
+import { isBlob, openBlob, openLocal, presignedRead } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-// Only published song audio is served. Uploads and notes are not reachable here.
-const ALLOWED = /^songs\/[a-z0-9][a-z0-9-]*\/audio\/[a-z_]+\.[a-f0-9]{6,40}\.m4a$/;
+// Only published song audio and workstation media are served. Uploads and notes
+// are not reachable here.
+const SONG_AUDIO = /^songs\/[a-z0-9][a-z0-9-]*\/audio\/[a-z_]+\.[a-f0-9]{6,40}\.m4a$/;
+
+const TYPES: Record<string, string> = {
+  m4a: "audio/mp4", mp4: "audio/mp4", aac: "audio/aac", wav: "audio/wav", mp3: "audio/mpeg",
+  flac: "audio/flac", ogg: "audio/ogg", aif: "audio/aiff", aiff: "audio/aiff", webm: "audio/webm",
+};
 
 /**
  * Song audio, for someone already past the passcode (the proxy checked).
@@ -15,9 +22,20 @@ const ALLOWED = /^songs\/[a-z0-9][a-z0-9-]*\/audio\/[a-z_]+\.[a-f0-9]{6,40}\.m4a
  */
 export async function GET(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const storePath = (await params).path.join("/");
-  if (!ALLOWED.test(storePath)) return bad("Not found.", 404);
+  if (!SONG_AUDIO.test(storePath) && !MEDIA_PATH.test(storePath)) return bad("Not found.", 404);
+  const type = TYPES[storePath.split(".").pop() ?? ""] ?? "application/octet-stream";
 
   if (isBlob()) {
+    // The workstation decodes whole files, which means reading the bytes from
+    // script. If the blob host will not allow that cross-origin, it asks again
+    // with `?inline=1` and the file is streamed through here instead.
+    if (new URL(request.url).searchParams.get("inline") === "1") {
+      const stream = await openBlob(storePath);
+      if (!stream) return bad("Not found.", 404);
+      return new Response(stream, {
+        headers: { "Content-Type": type, "Cache-Control": "private, max-age=31536000, immutable" },
+      });
+    }
     // Seeking needs byte ranges, which the blob host serves and a function
     // streaming the body would have to reimplement. Hand over a short-lived URL.
     const url = await presignedRead(storePath, 60 * 60 * 1000);
@@ -31,7 +49,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
   if (!file) return bad("Not found.", 404);
 
   const headers = new Headers({
-    "Content-Type": "audio/mp4",
+    "Content-Type": type,
     "Accept-Ranges": "bytes",
     "Cache-Control": "private, max-age=31536000, immutable",
   });
