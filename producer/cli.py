@@ -68,6 +68,7 @@ from producer.report_plot import plot_comparison
 from producer.generate import GenerationError, GenRequest, get_generator
 from producer.generate.ledger import BudgetExceeded, Ledger
 from producer.generate.run import GENERATION_FILE, generate_candidates
+from producer.generate.spec import analyze_spec
 
 EXISTING_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
 OUT_FILE = click.Path(dir_okay=False, path_type=Path)
@@ -1104,3 +1105,23 @@ def generate_cmd(
                     "for this vocal.", fg="yellow")
     click.echo(f"Total ${run['total_cost_usd']:.2f} · ledger ${run['ledger_spent_usd']:.2f} of "
                f"${run['budget_usd']:.2f} -> {out_dir / GENERATION_FILE}")
+
+
+@cli.command("spec")
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="The vocal to measure.")
+@click.option("--lyrics", "lyrics_path", type=EXISTING_FILE, help="Lyrics as a text file.")
+@click.option("--language", help="The language the vocal is in. Never guessed.")
+@click.option("--out", "out_path", type=OUT_FILE, help="Also write the JSON here.")
+def spec_cmd(vocal: Path, lyrics_path: Path | None, language: str | None,
+             out_path: Path | None) -> None:
+    """Measure what VOCAL asks of a backing: tempo, key, range, sections, contour.
+
+    Anything that cannot be measured is reported as null with the reason under
+    `unmeasured`, rather than filled with a guess.
+    """
+    spec = analyze_spec(vocal, lyrics_path.read_text() if lyrics_path else None, language)
+    payload = json.dumps(spec.to_dict(), indent=2)
+    click.echo(payload)
+    if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(payload + "\n")

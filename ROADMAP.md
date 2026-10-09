@@ -5,7 +5,7 @@
 - **Product promise:** drop lyrics, a vocal, or a vocal-on-beat → get a full, mixed, mastered song → say what to change → get the next version.
 - **Source of truth:** this file plus `PLAN.md` (M0–M7, done). Execute with the `pm-swe-build-executor` loop: read plan → verify last green → build one milestone → verify → update boxes and decision log → commit `{id}: {deliverable}` → stop.
 - **Envelope:** each *phase* ≤ 2 weeks solo; each *milestone* ≤ 1 day. Total ≈ 8–9 weeks, **but Phase A is a hard gate** — nothing after it starts unless it passes.
-- **Status:** Phase A — in progress (G0 done).
+- **Status:** Phase A — in progress (G0–G1 done).
 
 ## The one rule that governs the order
 
@@ -88,7 +88,7 @@ On **5 real vocals** across at least 3 genres, with ≥3 listeners per vocal:
   - [x] Full existing test suite still green
 - **Verify:** `pytest -q && producer generate --vocal tests/fixtures/target.wav --style "lofi" --out-dir /tmp/g0 --backend fake && test -s /tmp/g0/cand_1.wav && wc -l /tmp/g0/ledger.jsonl`
 
-### [ ] G1 — `VocalSpec`: key, tempo, structure, lyrics from the vocal
+### [x] G1 — `VocalSpec`: key, tempo, structure, lyrics from the vocal
 - **Deliverable:** `producer spec --vocal PATH [--lyrics FILE]` prints/writes a `VocalSpec` JSON with measured (never guessed) values and honest "unmeasurable" fields.
 - **Prompt:**
   ```
@@ -119,9 +119,9 @@ On **5 real vocals** across at least 3 genres, with ≥3 listeners per vocal:
   No new dependencies. Run pytest -q until green.
   ```
 - **Acceptance criteria:**
-  - [ ] Known-key synthetic fixture detected correctly; noise returns `None`
-  - [ ] `producer spec` on 3 real vocals returns plausible values you can confirm by ear
-  - [ ] No NaN/inf anywhere
+  - [x] Known-key synthetic fixture detected correctly; noise returns `None`
+  - [ ] `producer spec` on 3 real vocals returns plausible values you can confirm by ear — *run on nani-ki-kahani (no tempo, no key), sector-79 (99.5 BPM, F# minor) and iced-latte (99.1 BPM, no key); the by-ear confirmation is still owed*
+  - [x] No NaN/inf anywhere
 - **Verify:** `pytest -q tests/test_spec.py && producer spec --vocal tests/fixtures/target.wav | python -m json.tool`
 
 ### [ ] G2 — Vendor selection gate, then first real adapter
@@ -574,3 +574,9 @@ On **5 real vocals** across at least 3 genres, with ≥3 listeners per vocal:
 2026-10-08 — `Generator` gained `estimate_cost(req)` beyond the planned protocol. — The budget guard has to refuse before the call; without an estimate it could only report an overrun after the money was spent.
 2026-10-08 — The budget is checked against the ledger beside the candidates, one ledger per out-dir. — That is what the G0 prompt specifies; it caps a run, not an account. A per-song cap is B3's job and a shared ledger path can be passed to `Ledger` when one is wanted.
 2026-10-08 — The fake backend marks every result `generated: false` and the CLI says so on each run. — It hands back existing audio; a candidate folder that looks generated and is not would poison any listening test built on it.
+2026-10-08 — Key confidence is the margin between the best and second-best key, with a floor of 0.05. — Measured here: a sung melody 0.13 and a known-key arpeggio 0.30, against 0.02-0.03 for rapped vocals and one held note at 0.0003; below the floor the top key is one side of a near-tie.
+2026-10-08 — A frame counts as pitched only if pyin voices it and its spectral flatness is under 0.1. — pyin alone voiced a third of white-noise frames and one noise seed cleared the key floor at 0.22; flatness reads 0.56 on noise and 0.003 on every real vocal here.
+2026-10-08 — Vocal tempo reuses combine's periodicity floor (0.3), extracted as `measure_pulse`. — nani-ki-kahani reads 0.18 and tracks with drums 0.45-0.65; one floor in one place keeps "is there a pulse" from meaning two things.
+2026-10-08 — Reported tempo is the mean beat interval when it agrees with the tracker within 8%. — The tracker's own figure is quantised to whole frames, about 4% at 100 BPM, which is coarser than the tempo errors `fit` has to correct.
+2026-10-08 — Lyrics and language are taken as given and never inferred. — Nothing here transcribes or identifies a language; a guessed language in a generation prompt is the same failure as a guessed key.
+2026-10-08 — Section labels stay A/B/C in the spec and the prompt hints. — The structure analyser groups sections that sound alike; it cannot tell a verse from a chorus, and naming them would be inventing that.
