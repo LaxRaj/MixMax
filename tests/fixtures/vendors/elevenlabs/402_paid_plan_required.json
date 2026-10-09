@@ -1,0 +1,14 @@
+{
+  "recorded_on": "2026-10-08",
+  "request": "POST https://api.elevenlabs.io/v1/music?output_format=mp3_44100_192",
+  "status": 402,
+  "body": {
+    "detail": {
+      "type": "payment_required",
+      "code": "paid_plan_required",
+      "message": "Music API is not available for free users. Please upgrade to a paid plan to use the API.",
+      "status": "limited_access",
+      "request_id": "<redacted>"
+    }
+  }
+}

@@ -179,6 +179,18 @@ def test_a_failure_part_way_still_ledgers_what_was_paid_for(tmp_path: Path, monk
     assert len(entries) == 1 and entries[0]["cost_usd"] == pytest.approx(0.75)
 
 
+def test_a_free_plan_key_is_refused_in_the_vendors_own_words(tmp_path: Path, monkeypatch) -> None:
+    # The one response here that IS a recording: a real call with a free-plan key.
+    recorded = json.loads((Path(__file__).parent / "fixtures" / "vendors" / "elevenlabs"
+                           / "402_paid_plan_required.json").read_text())
+    transport = StubTransport((recorded["status"], {}, json.dumps(recorded["body"]).encode()))
+
+    with pytest.raises(GenerationError, match="HTTP 402.*upgrade to a paid plan"):
+        generate_candidates(_backend(transport, monkeypatch), _request(tmp_path), tmp_path / "out")
+    assert len(transport.calls) == 1
+    assert Ledger.in_dir(tmp_path / "out").entries() == []     # refused, so nothing was spent
+
+
 @pytest.mark.live
 def test_live_single_short_generation(tmp_path: Path) -> None:
     """One real, short, paid call. Run with: pytest --live -k live_single"""
