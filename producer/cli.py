@@ -65,6 +65,9 @@ from producer.standards import (
 )
 from producer.tune import tune_chain
 from producer.report_plot import plot_comparison
+from producer.generate import GenerationError, GenRequest, get_generator
+from producer.generate.ledger import BudgetExceeded, Ledger
+from producer.generate.run import GENERATION_FILE, generate_candidates
 
 EXISTING_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
 OUT_FILE = click.Path(dir_okay=False, path_type=Path)
@@ -1058,3 +1061,46 @@ def sync_cmd(workspace: Path, vocals_dir: Path, store_dir: Path | None,
             click.echo("\nStopped.")
             return
 
+
+
+@cli.command("generate")
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="The vocal the backing is for.")
+@click.option("--style", required=True, help="What the backing should sound like, in words.")
+@click.option("--out-dir", required=True, type=OUT_DIR, help="Where candidates are written.")
+@click.option("--backend", default="fake", show_default=True,
+              help="Which generator to use. `fake` copies existing beats and costs nothing.")
+@click.option("--n", "n_candidates", default=3, show_default=True, type=click.IntRange(1, 8),
+              help="How many candidates to ask for.")
+@click.option("--seed", type=int, help="Seed, for a repeatable request where the backend allows.")
+@click.option("--lyrics", "lyrics_path", type=EXISTING_FILE, help="Lyrics as a text file.")
+def generate_cmd(
+    vocal: Path, style: str, out_dir: Path, backend: str, n_candidates: int,
+    seed: int | None, lyrics_path: Path | None,
+) -> None:
+    """Ask a generator for candidate backings for VOCAL.
+
+    Every call is written to a ledger beside the candidates, and refused before
+    it is made if it would take spending past MIXMAX_GEN_BUDGET_USD.
+    """
+    try:
+        generator = get_generator(backend)
+    except KeyError as exc:
+        raise click.ClickException(exc.args[0]) from exc
+
+    req = GenRequest(
+        vocal=vocal, style=style, seed=seed, n_candidates=n_candidates,
+        lyrics=lyrics_path.read_text() if lyrics_path else None,
+    )
+    try:
+        run = generate_candidates(generator, req, out_dir)
+    except (BudgetExceeded, GenerationError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    for result in run["candidates"]:
+        click.echo(f"{result.path}  {result.vendor}/{result.model}  "
+                   f"${result.cost_usd:.2f}  {result.latency_s:.1f}s")
+    if backend == "fake":
+        click.secho("The fake backend copies existing audio. Nothing here was generated "
+                    "for this vocal.", fg="yellow")
+    click.echo(f"Total ${run['total_cost_usd']:.2f} · ledger ${run['ledger_spent_usd']:.2f} of "
+               f"${run['budget_usd']:.2f} -> {out_dir / GENERATION_FILE}")
