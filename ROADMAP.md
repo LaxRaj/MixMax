@@ -5,7 +5,7 @@
 - **Product promise:** drop lyrics, a vocal, or a vocal-on-beat → get a full, mixed, mastered song → say what to change → get the next version.
 - **Source of truth:** this file plus `PLAN.md` (M0–M7, done). Execute with the `pm-swe-build-executor` loop: read plan → verify last green → build one milestone → verify → update boxes and decision log → commit `{id}: {deliverable}` → stop.
 - **Envelope:** each *phase* ≤ 2 weeks solo; each *milestone* ≤ 1 day. Total ≈ 8–9 weeks, **but Phase A is a hard gate** — nothing after it starts unless it passes.
-- **Status:** Phase A — in progress (G0–G1 done).
+- **Status:** Phase A — in progress. G0 done. G1 and G3 are built and tested; each has one check by ear still owed.
 
 ## The one rule that governs the order
 
@@ -88,7 +88,7 @@ On **5 real vocals** across at least 3 genres, with ≥3 listeners per vocal:
   - [x] Full existing test suite still green
 - **Verify:** `pytest -q && producer generate --vocal tests/fixtures/target.wav --style "lofi" --out-dir /tmp/g0 --backend fake && test -s /tmp/g0/cand_1.wav && wc -l /tmp/g0/ledger.jsonl`
 
-### [x] G1 — `VocalSpec`: key, tempo, structure, lyrics from the vocal
+### [ ] G1 — `VocalSpec`: key, tempo, structure, lyrics from the vocal
 - **Deliverable:** `producer spec --vocal PATH [--lyrics FILE]` prints/writes a `VocalSpec` JSON with measured (never guessed) values and honest "unmeasurable" fields.
 - **Prompt:**
   ```
@@ -190,9 +190,9 @@ On **5 real vocals** across at least 3 genres, with ≥3 listeners per vocal:
   and why.
   ```
 - **Acceptance criteria:**
-  - [ ] Wrong-key and off-tempo synthetic candidates handled per the rules
-  - [ ] Every rejection carries a human-readable reason
-  - [ ] On 3 real vendor outputs, accept/reject decisions match your own ears on ≥2
+  - [x] Wrong-key and off-tempo synthetic candidates handled per the rules
+  - [x] Every rejection carries a human-readable reason
+  - [ ] On 3 real vendor outputs, accept/reject decisions match your own ears on ≥2 — *needs G2's live vendor output and a listener*
 - **Verify:** `pytest -q tests/test_fit.py && producer fit --vocal tests/fixtures/target.wav --candidate /tmp/g2/cand_1.wav --out /tmp/fitted.wav`
 
 ### [ ] G4 — Candidate pipeline + the Phase A experiment
@@ -580,3 +580,10 @@ On **5 real vocals** across at least 3 genres, with ≥3 listeners per vocal:
 2026-10-08 — Reported tempo is the mean beat interval when it agrees with the tracker within 8%. — The tracker's own figure is quantised to whole frames, about 4% at 100 BPM, which is coarser than the tempo errors `fit` has to correct.
 2026-10-08 — Lyrics and language are taken as given and never inferred. — Nothing here transcribes or identifies a language; a guessed language in a generation prompt is the same failure as a guessed key.
 2026-10-08 — Section labels stay A/B/C in the spec and the prompt hints. — The structure analyser groups sections that sound alike; it cannot tell a verse from a chorus, and naming them would be inventing that.
+2026-10-08 — Time-stretch and pitch-shift use `pedalboard.time_stretch`, not librosa. — pedalboard is already a dependency and wraps Rubber Band; librosa's phase vocoder smears drums, and pyrubberband is not installed. No new dependency.
+2026-10-08 — `fit` stretches up to 8% and rejects beyond it; tempos within 0.2% are left alone. — Past 8% a stretch is audible on drums and the candidate was written at another tempo; 0.2% is 0.3s of drift over 2.5 minutes, about what the measurement resolves. Both are defaults until listeners say otherwise.
+2026-10-08 — Key clash is the gap in Krumhansl-Schmuckler correlation between the candidate's best key and the vocal's key or its relative, rejected above 0.2. — The first measure, share of chroma energy outside the vocal's scale, read 0.10 vs 0.36 on synthetic audio but 0.36-0.41 on every real track against its own key, where chance is 0.42. The gap reads 0.00 matched, 0.10 a fifth away, 0.46 for F# minor under A minor, and 0.2-1.0 for real tonal tracks transposed 1-2 semitones.
+2026-10-08 — A wrong key is shifted by at most 2 semitones, smallest shift first. — A larger shift changes the character of the instruments rather than only the key.
+2026-10-08 — `fit` reports a candidate's key together with its relative. — A key and its relative share every note and chroma cannot separate them; naming one would be a coin toss presented as a measurement.
+2026-10-08 — What the vocal does not measure, `fit` does not check, and each pass says which checks were skipped. — nani-ki-kahani has no measurable tempo or key, so its real beat passes with tempo, key and alignment all unverified; a bare "passed" would read as though they had been.
+2026-10-08 — Vocal-band masking is reported and noted above -3 dB, never a rejection. — No listening result here says where masking becomes a fault, and a threshold picked without one would reject on a guess.

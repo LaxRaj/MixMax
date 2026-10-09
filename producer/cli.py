@@ -68,6 +68,7 @@ from producer.report_plot import plot_comparison
 from producer.generate import GenerationError, GenRequest, get_generator
 from producer.generate.ledger import BudgetExceeded, Ledger
 from producer.generate.run import GENERATION_FILE, generate_candidates
+from producer.generate.fit import fit_candidate
 from producer.generate.spec import analyze_spec
 
 EXISTING_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
@@ -1125,3 +1126,34 @@ def spec_cmd(vocal: Path, lyrics_path: Path | None, language: str | None,
     if out_path is not None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(payload + "\n")
+
+
+@cli.command("fit")
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="The vocal.")
+@click.option("--candidate", required=True, type=EXISTING_FILE, help="A candidate backing.")
+@click.option("--out", "out_path", required=True, type=OUT_FILE,
+              help="Where the fitted candidate goes, if it passes.")
+@click.option("--spec", "spec_path", type=EXISTING_FILE,
+              help="A VocalSpec from `producer spec`. Measured from the vocal if omitted.")
+def fit_cmd(vocal: Path, candidate: Path, out_path: Path, spec_path: Path | None) -> None:
+    """Tempo-lock CANDIDATE to VOCAL and check the key, or reject it with reasons.
+
+    A rejection is a result, not an error: the exit code is 0 either way, and
+    the report beside --out says what was done and what could not be checked.
+    """
+    spec = json.loads(spec_path.read_text()) if spec_path else None
+    result = fit_candidate(vocal, candidate, spec, out_path)
+
+    report = out_path.with_suffix(".fit.json")
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(json.dumps(result.to_dict(), indent=2) + "\n")
+
+    if result.passed:
+        click.secho(f"FIT -> {result.output}", fg="green")
+    else:
+        click.secho("REJECT", fg="red", bold=True)
+        for reason in result.reasons:
+            click.echo(f"  - {reason}")
+    for note in result.notes:
+        click.echo(f"  · {note}")
+    click.echo(f"Report -> {report}")
