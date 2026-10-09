@@ -13,7 +13,12 @@ from producer.benchmark import measure as measure_audio
 from producer.dashboard import build_dashboard
 from producer.batch import run_batch
 from producer.benchmark import build_benchmark_report, compare, discover_versions
-from producer.blindtest import build_blind_test, build_tally_report, tally
+from producer.blindtest import (
+    build_blind_test,
+    build_tally_report,
+    publish_listening_test,
+    tally,
+)
 from producer.intake import DEFAULT_SERVICES, run_intake
 from producer.library import (
     Library,
@@ -49,7 +54,7 @@ from producer.combine import (
     find_offset,
 )
 from producer.progress import build_comparison
-from producer.song import deliver_master
+from producer.song import RebuildError, SettingsError, apply_text, deliver_master
 from producer.store import StoreError, open_store
 from producer.sync import Syncer
 from producer.structure import analyze_structure, build_structure_report
@@ -65,6 +70,18 @@ from producer.standards import (
 )
 from producer.tune import tune_chain
 from producer.report_plot import plot_comparison
+from producer.generate import GenerationError, GenRequest, get_generator
+from producer.generate.ledger import BudgetExceeded, Ledger
+from producer.generate.run import GENERATION_FILE, generate_candidates
+from producer.generate.fit import fit_candidate
+from producer.generate.gate import build_gate_report, judge_vocal, phase_a_gate
+from producer.generate.pipeline import (
+    SUMMARY_FILE,
+    IntakeBlocked,
+    NoSurvivors,
+    song_from_vocal,
+)
+from producer.generate.spec import analyze_spec
 
 EXISTING_FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
 OUT_FILE = click.Path(dir_okay=False, path_type=Path)
@@ -1058,3 +1075,221 @@ def sync_cmd(workspace: Path, vocals_dir: Path, store_dir: Path | None,
             click.echo("\nStopped.")
             return
 
+
+
+@cli.command("generate")
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="The vocal the backing is for.")
+@click.option("--style", required=True, help="What the backing should sound like, in words.")
+@click.option("--out-dir", required=True, type=OUT_DIR, help="Where candidates are written.")
+@click.option("--backend", default="fake", show_default=True,
+              help="Which generator to use. `fake` copies existing beats and costs nothing.")
+@click.option("--n", "n_candidates", default=3, show_default=True, type=click.IntRange(1, 8),
+              help="How many candidates to ask for.")
+@click.option("--seed", type=int, help="Seed, for a repeatable request where the backend allows.")
+@click.option("--lyrics", "lyrics_path", type=EXISTING_FILE, help="Lyrics as a text file.")
+def generate_cmd(
+    vocal: Path, style: str, out_dir: Path, backend: str, n_candidates: int,
+    seed: int | None, lyrics_path: Path | None,
+) -> None:
+    """Ask a generator for candidate backings for VOCAL.
+
+    Every call is written to a ledger beside the candidates, and refused before
+    it is made if it would take spending past MIXMAX_GEN_BUDGET_USD.
+    """
+    try:
+        generator = get_generator(backend)
+    except KeyError as exc:
+        raise click.ClickException(exc.args[0]) from exc
+    except GenerationError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    req = GenRequest(
+        vocal=vocal, style=style, seed=seed, n_candidates=n_candidates,
+        lyrics=lyrics_path.read_text() if lyrics_path else None,
+    )
+    try:
+        run = generate_candidates(generator, req, out_dir)
+    except (BudgetExceeded, GenerationError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    for result in run["candidates"]:
+        click.echo(f"{result.path}  {result.vendor}/{result.model}  "
+                   f"${result.cost_usd:.2f}  {result.latency_s:.1f}s")
+    if backend == "fake":
+        click.secho("The fake backend copies existing audio. Nothing here was generated "
+                    "for this vocal.", fg="yellow")
+    click.echo(f"Total ${run['total_cost_usd']:.2f} · ledger ${run['ledger_spent_usd']:.2f} of "
+               f"${run['budget_usd']:.2f} -> {out_dir / GENERATION_FILE}")
+
+
+@cli.command("spec")
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="The vocal to measure.")
+@click.option("--lyrics", "lyrics_path", type=EXISTING_FILE, help="Lyrics as a text file.")
+@click.option("--language", help="The language the vocal is in. Never guessed.")
+@click.option("--out", "out_path", type=OUT_FILE, help="Also write the JSON here.")
+def spec_cmd(vocal: Path, lyrics_path: Path | None, language: str | None,
+             out_path: Path | None) -> None:
+    """Measure what VOCAL asks of a backing: tempo, key, range, sections, contour.
+
+    Anything that cannot be measured is reported as null with the reason under
+    `unmeasured`, rather than filled with a guess.
+    """
+    spec = analyze_spec(vocal, lyrics_path.read_text() if lyrics_path else None, language)
+    payload = json.dumps(spec.to_dict(), indent=2)
+    click.echo(payload)
+    if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(payload + "\n")
+
+
+@cli.command("fit")
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="The vocal.")
+@click.option("--candidate", required=True, type=EXISTING_FILE, help="A candidate backing.")
+@click.option("--out", "out_path", required=True, type=OUT_FILE,
+              help="Where the fitted candidate goes, if it passes.")
+@click.option("--spec", "spec_path", type=EXISTING_FILE,
+              help="A VocalSpec from `producer spec`. Measured from the vocal if omitted.")
+def fit_cmd(vocal: Path, candidate: Path, out_path: Path, spec_path: Path | None) -> None:
+    """Tempo-lock CANDIDATE to VOCAL and check the key, or reject it with reasons.
+
+    A rejection is a result, not an error: the exit code is 0 either way, and
+    the report beside --out says what was done and what could not be checked.
+    """
+    spec = json.loads(spec_path.read_text()) if spec_path else None
+    result = fit_candidate(vocal, candidate, spec, out_path)
+
+    report = out_path.with_suffix(".fit.json")
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(json.dumps(result.to_dict(), indent=2) + "\n")
+
+    if result.passed:
+        click.secho(f"FIT -> {result.output}", fg="green")
+    else:
+        click.secho("REJECT", fg="red", bold=True)
+        for reason in result.reasons:
+            click.echo(f"  - {reason}")
+    for note in result.notes:
+        click.echo(f"  · {note}")
+    click.echo(f"Report -> {report}")
+
+
+@cli.command("song-from-vocal")
+@click.option("--vocal", required=True, type=EXISTING_FILE, help="The vocal to build a song around.")
+@click.option("--style", required=True, help="What the backing should sound like, in words.")
+@click.option("--workspace", required=True, type=OUT_DIR, help="Where the song folder goes.")
+@click.option("--backend", default="fake", show_default=True, help="Which generator to use.")
+@click.option("--n", "n_candidates", default=3, show_default=True, type=click.IntRange(1, 8),
+              help="How many candidate backings to ask for.")
+@click.option("--seed", type=int, help="Seed for the generator and the blind-test shuffle.")
+@click.option("--lyrics", "lyrics_path", type=EXISTING_FILE, help="Lyrics as a text file.")
+@click.option("--language", help="The language the vocal is in. Never guessed.")
+@click.option("--lufs", "target_lufs", default=-16.0, show_default=True, type=float,
+              help="Loudness of the finished master.")
+@click.option("--blind-dir", type=OUT_DIR, default="blind", show_default=True,
+              help="Where the blind test goes. The key is written beside it, not inside.")
+@click.option("--no-blind", is_flag=True, help="Skip building the blind test.")
+@click.option("--publish-web", "web_public", type=OUT_DIR,
+              help="Also publish the blind test to this web/public folder for the listening page.")
+def song_from_vocal_cmd(
+    vocal: Path, style: str, workspace: Path, backend: str, n_candidates: int,
+    seed: int | None, lyrics_path: Path | None, language: str | None, target_lufs: float,
+    blind_dir: Path, no_blind: bool, web_public: Path | None,
+) -> None:
+    """Vocal in, finished song out: measure, generate, fit, mix, master, QA.
+
+    Every candidate backing is fitted to the vocal or dropped with the reason.
+    If none fits, this stops with a non-zero exit rather than finishing a song
+    on a backing that does not belong under it. It also builds the blind test
+    that compares the finished song against the generator's raw output.
+    """
+    try:
+        summary = song_from_vocal(
+            vocal, style, workspace, backend=backend, n_candidates=n_candidates, seed=seed,
+            lyrics=lyrics_path.read_text() if lyrics_path else None, language=language,
+            target_lufs=target_lufs, blind_dir=None if no_blind else blind_dir,
+            log=lambda msg: click.echo(f"  {msg}"),
+        )
+    except KeyError as exc:
+        raise click.ClickException(exc.args[0]) from exc
+    except (IntakeBlocked, NoSurvivors, BudgetExceeded, GenerationError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    song_dir = workspace / summary["slug"]
+    for row in summary["candidates"]:
+        if not row["passed_fit"]:
+            click.secho(f"candidate {row['index']}: REJECT", fg="red")
+            for reason in row["reasons"]:
+                click.echo(f"    - {reason}")
+            continue
+        verdict = "QA PASS" if row["qa"]["pass"] else "QA FAIL"
+        chosen = "  <- chosen" if row["index"] == summary["chosen"] else ""
+        click.secho(f"candidate {row['index']}: fits, {verdict} at {row['qa']['lufs']} LUFS{chosen}",
+                    fg="green" if row["qa"]["pass"] else "yellow")
+        for note in row["notes"] + row["qa"]["flags"]:
+            click.echo(f"    · {note}")
+
+    if not summary["chosen_qa_pass"]:
+        click.secho("No candidate passed QA; the chosen master carries the flags above.",
+                    fg="yellow")
+    if backend == "fake":
+        click.secho("The fake backend copies existing audio. This backing was not generated "
+                    "for this vocal.", fg="yellow")
+    click.echo(f"Cost ${summary['cost_usd']:.2f} · master -> {summary['master']}")
+    click.echo(f"Summary -> {song_dir / SUMMARY_FILE}")
+
+    blind = summary.get("blind_test")
+    if blind:
+        click.echo(f"Blind test -> {blind['share']} (matched to {blind['target_lufs']} LUFS)")
+        click.secho(f"Keep the key private -> {blind['key']}", fg="yellow")
+        if web_public is not None:
+            try:
+                published = publish_listening_test(
+                    blind["share"], web_public, f"song-{summary['slug']}",
+                    "Would you release this?",
+                    "Two finishes of the same song. Score each, then say which sounds more finished.",
+                )
+            except (ValueError, RuntimeError) as exc:
+                raise click.ClickException(str(exc)) from exc
+            click.echo(f"Listening page -> /listen?test=song-{summary['slug']} "
+                       f"({published['manifest']})")
+
+
+@cli.command("restyle")
+@click.option("--song", "song_dir", required=True, type=IN_DIR, help="A song folder made by song-from-vocal.")
+@click.option("--style", required=True, help="The new style, in words.")
+@click.option("--backend", help="Switch generator as well.")
+def restyle_cmd(song_dir: Path, style: str, backend: str | None) -> None:
+    """Generate a new backing for a song in a different style, and re-render it.
+
+    This calls the generator again, so it costs what a generation costs. Only
+    songs whose backing was generated here can be restyled; an uploaded beat is
+    never replaced.
+    """
+    changes = {"style": style, **({"backend": backend} if backend else {})}
+    try:
+        rendered = apply_text(song_dir, changes, log=lambda msg: click.echo(f"  {msg}"))
+    except (SettingsError, RebuildError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"Re-rendered {', '.join(rendered)} in {song_dir}")
+
+
+@cli.command("gate")
+@click.option("--test", "tests", required=True, multiple=True, nargs=2,
+              type=click.Path(exists=True, path_type=Path), metavar="KEY RESPONSES",
+              help="One vocal's blind-test key and its responses (a CSV or a folder). Repeat per vocal.")
+@click.option("--out", "out_path", type=OUT_FILE, help="Write the markdown decision here.")
+def gate_cmd(tests: tuple[tuple[Path, Path], ...], out_path: Path | None) -> None:
+    """Apply the Phase A gate to the blind-test results for every vocal.
+
+    Reports pass, fail or retry by the thresholds written down before any
+    listening, or `incomplete` while vocals or listeners are still missing.
+    """
+    vocals = [judge_vocal(key.name.removesuffix(".key.json"), tally(key, responses))
+              for key, responses in tests]
+    result = phase_a_gate(vocals)
+    report = build_gate_report(result)
+    if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report)
+        click.echo(f"Gate -> {out_path}")
+    click.echo(report)

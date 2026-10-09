@@ -46,9 +46,10 @@ MASTER_EXTENDED = "MASTER_extended.wav"
 VOCAL_ONLY = "vocal-only"
 
 # Signal order. A change to one group re-renders it and everything after it.
-GROUPS = ("vocal", "balance", "master", "arrangement")
+GROUPS = ("generate", "vocal", "balance", "master", "arrangement")
 
 GROUP_COPY = {
+    "generate": ("Backing track", "The generated backing the vocal sits on."),
     "vocal": ("Vocal chain", "Cleans and shapes the raw vocal before anything is added."),
     "balance": ("Vocal against the beat", "How the vocal sits over the instrumental."),
     "master": ("Master", "The loudness the finished master is delivered at."),
@@ -121,6 +122,38 @@ FIELDS: tuple[Field, ...] = (
 FIELD_BY_KEY = {f.key: f for f in FIELDS}
 
 
+@dataclass(frozen=True)
+class TextField:
+    """A setting that is words, not a number.
+
+    `Field` is a range with a step, which is the wrong shape for a style
+    description, so these are kept apart: stored under `"text"` in
+    settings.json, validated by `validate_text`, and never handed to the
+    numeric knobs or the code that reads them.
+    """
+
+    key: str
+    group: str
+    label: str
+    help: str
+    max_length: int = 400
+
+    def to_dict(self) -> dict:
+        return {"key": self.key, "group": self.group, "label": self.label,
+                "help": self.help, "max_length": self.max_length, "kind": "text"}
+
+
+TEXT_FIELDS: tuple[TextField, ...] = (
+    TextField("style", "generate", "Style",
+              "What the backing should sound like, in words. Changing it generates a new "
+              "backing, which costs money."),
+    TextField("backend", "generate", "Generator",
+              "Which generation backend makes the backing.", max_length=40),
+)
+
+TEXT_FIELD_BY_KEY = {f.key: f for f in TEXT_FIELDS}
+
+
 class SettingsError(ValueError):
     """A requested change that must not be applied."""
 
@@ -177,9 +210,62 @@ def save_settings(song_dir: str | Path, values: dict, title: str | None = None) 
     }
     if payload["title"] is None:
         del payload["title"]
+    if existing.get("text"):
+        payload["text"] = existing["text"]
     song_dir.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n")
     return path
+
+
+def load_text(song_dir: str | Path) -> dict:
+    """The text settings recorded for a song. Empty if it was never generated."""
+    path = Path(song_dir) / SETTINGS_FILE
+    if not path.exists():
+        return {}
+    text = json.loads(path.read_text()).get("text", {})
+    return {k: v for k, v in text.items() if k in TEXT_FIELD_BY_KEY}
+
+
+def save_text(song_dir: str | Path, text: dict) -> Path:
+    """Record text settings, leaving the numeric ones and the title as they are."""
+    song_dir = Path(song_dir)
+    path = song_dir / SETTINGS_FILE
+    payload = json.loads(path.read_text()) if path.exists() else {"values": {}}
+    merged = {**payload.get("text", {}), **{k: v for k, v in text.items() if k in TEXT_FIELD_BY_KEY}}
+    payload["text"] = {k: merged[k] for k in sorted(merged)}
+    song_dir.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n")
+    return path
+
+
+def validate_text(changes: dict) -> dict:
+    """Check requested text settings. Raises on any problem, like `validate_changes`."""
+    if not isinstance(changes, dict) or not changes:
+        raise SettingsError("The request changes nothing.")
+    problems: list[str] = []
+    clean: dict = {}
+    for key, value in changes.items():
+        field = TEXT_FIELD_BY_KEY.get(key)
+        if field is None:
+            problems.append(f"`{key}` is not a text setting.")
+            continue
+        if not isinstance(value, str) or not value.strip():
+            problems.append(f"{field.label} must be some text.")
+            continue
+        value = value.strip()
+        if len(value) > field.max_length:
+            problems.append(f"{field.label} must be {field.max_length} characters or fewer; "
+                            f"got {len(value)}.")
+            continue
+        clean[key] = value
+    if "backend" in clean:
+        from producer.generate.registry import registered
+
+        if clean["backend"] not in registered():
+            problems.append(f"Generator must be one of: {', '.join(registered())}.")
+    if problems:
+        raise SettingsError(" ".join(problems))
+    return clean
 
 
 def validate_changes(changes: dict) -> dict:
@@ -217,7 +303,27 @@ def validate_changes(changes: dict) -> dict:
 def groups_touched(changes: dict) -> list[str]:
     """Which stages a change affects, in signal order."""
     touched = {FIELD_BY_KEY[k].group for k in changes if k in FIELD_BY_KEY}
+    touched |= {TEXT_FIELD_BY_KEY[k].group for k in changes if k in TEXT_FIELD_BY_KEY}
     return [g for g in GROUPS if g in touched]
+
+
+def apply_text(
+    song_dir: str | Path, changes: dict, log: Callable[[str], None] = lambda _msg: None
+) -> list[str]:
+    """Change text settings and re-render from the stage they touch.
+
+    The settings are only recorded once the rebuild has succeeded, so a failed
+    regeneration leaves the song describing the backing it still has.
+    """
+    clean = validate_text(changes)
+    groups = groups_touched(clean)
+    for group in groups:
+        applies, why_not = group_applies(song_dir, group)
+        if not applies:
+            raise SettingsError(why_not)
+    rendered = rebuild(song_dir, groups[0], text=clean, log=log)
+    save_text(song_dir, clean)
+    return rendered
 
 
 # ── what a song is made of ──────────────────────────────────────────────────
@@ -227,9 +333,21 @@ def song_kind(song_dir: str | Path) -> str:
     return classify_track(Path(song_dir) / ORIGINAL)[0]
 
 
+def is_generated(song_dir: str | Path) -> bool:
+    """Whether this song's beat came from `song-from-vocal` rather than an upload."""
+    return bool(load_text(song_dir).get("style")) and (Path(song_dir) / "generated").is_dir()
+
+
 def group_applies(song_dir: str | Path, group: str, kind: str | None = None) -> tuple[bool, str]:
     """Whether a settings group means anything for this song, and why not."""
     song_dir = Path(song_dir)
+    if group == "generate":
+        # Regenerating replaces beat.wav, so it must never reach a beat someone
+        # wrote, bought or uploaded.
+        if not is_generated(song_dir):
+            return False, ("This song's backing was not generated here, "
+                           "so there is nothing to regenerate.")
+        return True, ""
     kind = kind or song_kind(song_dir)
     if group == "vocal" and kind != VOCAL_ONLY:
         return False, "This arrived as a finished mix, so there is no separate vocal to process."
@@ -350,6 +468,7 @@ def rebuild(
     values: dict | None = None,
     force: tuple[str, ...] | list[str] = (),
     log: Callable[[str], None] = lambda _msg: None,
+    text: dict | None = None,
 ) -> list[str]:
     """Re-render from `start` onwards. Returns the files that were rewritten.
 
@@ -360,6 +479,11 @@ def rebuild(
 
     Everything is rendered into a scratch folder and only moved into place once
     every stage has succeeded. A failure leaves the song exactly as it was.
+
+    Starting at `generate` asks the generator for a new backing, using the
+    song's text settings overridden by `text`. That is the one stage that costs
+    money, and its attempts are recorded under `generated/` whether or not the
+    rebuild then succeeds.
     """
     song_dir = Path(song_dir)
     if start not in GROUPS:
@@ -379,6 +503,9 @@ def rebuild(
     shutil.rmtree(scratch, ignore_errors=True)
     scratch.mkdir()
     fresh: dict[str, Path] = {}
+    extras: dict[str, Path] = {}      # per-candidate records that follow a new beat
+    stale: list[Path] = []
+    new_offset: float | None = None
 
     def current(name: str) -> Path | None:
         """The newest version of a file: this run's, else what is already there."""
@@ -388,14 +515,26 @@ def rebuild(
         return path if path.exists() else None
 
     try:
+        if first == 0:
+            if not is_generated(song_dir):
+                raise RebuildError(group_applies(song_dir, "generate")[1])
+            log("generate a new backing")
+            from producer.generate.pipeline import regenerate
+
+            extras, stale, new_offset = regenerate(
+                song_dir, scratch, {**load_text(song_dir), **(text or {})}, log)
+            fresh[BEAT] = extras.pop(BEAT)
+            # The offset belongs to the beat it was measured against.
+            values["offset_s"] = new_offset
+
         if kind == VOCAL_ONLY and wanted("vocal", VOCAL_MIXED):
             log("vocal chain")
             params = ChainParams.from_dict(values)
             fresh[VOCAL_MIXED] = mix_vocal(source, scratch / VOCAL_MIXED, params)
 
         voice = current(VOCAL_MIXED) or source
-        beat = song_dir / BEAT
-        if kind == VOCAL_ONLY and beat.exists() and wanted("balance", WITH_BEAT):
+        beat = current(BEAT)
+        if kind == VOCAL_ONLY and beat is not None and wanted("balance", WITH_BEAT):
             log("vocal over the beat")
             combine(
                 voice, beat, scratch / WITH_BEAT,
@@ -428,8 +567,16 @@ def rebuild(
                            reference=reference, scratch=scratch)
             fresh[MASTER_EXTENDED] = scratch / MASTER_EXTENDED
 
-        for name, path in fresh.items():
+        for name, path in {**fresh, **extras}.items():
+            (song_dir / name).parent.mkdir(parents=True, exist_ok=True)
             Path(path).replace(song_dir / name)
+        for path in stale:
+            path.unlink(missing_ok=True)
+        if new_offset is not None:
+            recorded = {**load_recorded(song_dir), "offset_s": new_offset}
+            if not new_offset:
+                recorded.pop("offset_s")
+            save_settings(song_dir, recorded)
         return list(fresh)
     except RebuildError:
         raise

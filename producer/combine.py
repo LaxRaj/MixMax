@@ -116,6 +116,26 @@ GRID_SUBDIVISION = 4          # sixteenths
 MIN_GRID_PERIODICITY = 0.3
 
 
+def measure_pulse(y: np.ndarray, sr: int) -> tuple[float, np.ndarray, float]:
+    """Tempo, beat frames, and how periodic the onsets actually are.
+
+    A beat tracker always returns a tempo. Periodicity is the onset envelope's
+    autocorrelation at that tempo's lag, and it is what says whether there was
+    a pulse to find: drums score around 0.45 and up, an a cappella around 0.1.
+    The tempo is returned as tracked, not folded.
+    """
+    onset_env = librosa.onset.onset_strength(y=y, sr=sr)
+    tempo, beats = librosa.beat.beat_track(onset_envelope=onset_env, sr=sr)
+    tempo = float(np.atleast_1d(tempo)[0])
+
+    centred = onset_env - onset_env.mean()
+    auto = librosa.autocorrelate(centred, max_size=int(4 * sr / 512))
+    auto = auto / (auto[0] + 1e-9)
+    lag = int(round((60.0 / tempo) * sr / 512)) if tempo > 0 else 0
+    periodicity = float(auto[lag]) if 0 < lag < len(auto) else 0.0
+    return tempo, beats, periodicity
+
+
 def align_to_grid(vocal: str | Path, beat: str | Path) -> Alignment:
     """Lock the vocal to the beat's own grid.
 
@@ -129,16 +149,8 @@ def align_to_grid(vocal: str | Path, beat: str | Path) -> Alignment:
     """
     beat_path, vocal_path = Path(beat), Path(vocal)
     beat_y, sr = librosa.load(str(beat_path), sr=22050, mono=True)
-    onset_env = librosa.onset.onset_strength(y=beat_y, sr=sr)
-    tempo, beats = librosa.beat.beat_track(onset_envelope=onset_env, sr=sr)
-    tempo = float(np.atleast_1d(tempo)[0])
-
     # Only trust this when the beat really has a pulse.
-    centred = onset_env - onset_env.mean()
-    auto = librosa.autocorrelate(centred, max_size=int(4 * sr / 512))
-    auto = auto / (auto[0] + 1e-9)
-    lag = int(round((60.0 / tempo) * sr / 512)) if tempo > 0 else 0
-    periodicity = float(auto[lag]) if 0 < lag < len(auto) else 0.0
+    tempo, beats, periodicity = measure_pulse(beat_y, sr)
     if periodicity < MIN_GRID_PERIODICITY or len(beats) < 8:
         return Alignment(0.0, 0.0, f"beat has no usable grid (periodicity {periodicity:.2f})")
 

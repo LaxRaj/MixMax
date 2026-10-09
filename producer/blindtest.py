@@ -20,6 +20,7 @@ import random
 import string
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 import pyloudnorm as pyln
@@ -79,8 +80,14 @@ def build_blind_test(
     key_path: str | Path | None = None,
     target_lufs: float | None = None,
     seed: int | None = None,
+    instructions: Callable[[list[str], float], str] | None = None,
 ) -> dict:
-    """Render a loudness-matched, anonymized, shuffled listening set."""
+    """Render a loudness-matched, anonymized, shuffled listening set.
+
+    `instructions` replaces the default INSTRUCTIONS.md for a test that asks
+    something different; the scoresheet columns stay the same so `tally` reads
+    every test alike.
+    """
     if len(versions) < 2:
         raise ValueError("a blind test needs at least two versions to compare")
 
@@ -125,9 +132,64 @@ def build_blind_test(
     key_path.write_text(json.dumps(key, indent=2) + "\n")
 
     _write_scoresheet(out_dir / "SCORESHEET.csv", [v.label for v in assigned])
-    (out_dir / "INSTRUCTIONS.md").write_text(_instructions([v.label for v in assigned], target))
+    (out_dir / "INSTRUCTIONS.md").write_text(
+        (instructions or _instructions)([v.label for v in assigned], target))
 
     return {"key_path": key_path, "listen_dir": listen_dir, "out_dir": out_dir, **key}
+
+
+# Source names must never reach the browser: anything in the manifest is visible
+# in the network tab. The listening page refuses a manifest containing these.
+LEAKY_WORDS = ("producer", "landr", "original", "emastered", "pipeline", "vendor", "raw")
+
+
+def publish_listening_test(
+    blind_dir: str | Path,
+    web_public: str | Path,
+    slug: str,
+    title: str,
+    blurb: str,
+    encode: Callable[[Path, Path], None] | None = None,
+) -> dict:
+    """Put a built blind test where the hosted listening page serves it from.
+
+    Writes `<web_public>/audio/<slug>/<label>.m4a`, `<web_public>/tests/<slug>.json`
+    and adds the test to `tests/index.json`. Only labels are published; the key
+    stays wherever `build_blind_test` wrote it.
+    """
+    blind_dir, web_public = Path(blind_dir), Path(web_public)
+    sources = sorted((blind_dir / "listen").glob("*.wav"))
+    if len(sources) < 2:
+        raise ValueError(f"{blind_dir} has no blind test to publish; run `blindtest` first.")
+    leaked = [w for w in LEAKY_WORDS if w in f"{slug} {title} {blurb}".lower()]
+    if leaked:
+        raise ValueError(
+            f"The slug, title or blurb would un-blind the test: contains {', '.join(leaked)}."
+        )
+    if encode is None:
+        from producer.sync import encode_aac as encode
+
+    labels = [path.stem for path in sources]
+    for path in sources:
+        encode(path, web_public / "audio" / slug / f"{path.stem}.m4a")
+    length_s = round(min(Track.load(path).duration_s for path in sources), 1)
+
+    manifest = {
+        "slug": slug, "title": title, "blurb": blurb, "labels": labels,
+        "urls": {label: f"/audio/{slug}/{label}.m4a" for label in labels},
+    }
+    tests_dir = web_public / "tests"
+    tests_dir.mkdir(parents=True, exist_ok=True)
+    (tests_dir / f"{slug}.json").write_text(json.dumps(manifest, indent=2) + "\n")
+
+    index_path = tests_dir / "index.json"
+    index = json.loads(index_path.read_text()) if index_path.exists() else {"tests": []}
+    index["tests"] = [t for t in index["tests"] if t.get("slug") != slug] + [{
+        "slug": slug, "title": title, "blurb": blurb,
+        "labels": len(labels), "length_s": length_s,
+    }]
+    index_path.write_text(json.dumps(index, indent=2) + "\n")
+    return {"manifest": str(tests_dir / f"{slug}.json"), "labels": labels, "length_s": length_s}
 
 
 def _write_scoresheet(path: Path, labels: list[str]) -> None:
