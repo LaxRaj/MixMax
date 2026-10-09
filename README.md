@@ -647,6 +647,51 @@ The studio also has a workstation at `/produce` for making the beat itself —
 drums, synth, recording, arranging, mixing. What it exports arrives here as an
 ordinary upload, so `producer sync` checks, mixes and masters it like any other.
 
+## Generating a backing for a vocal
+
+Everything above processes audio that already exists. These commands add the
+missing half: a backing track made for a vocal. Generation is rented from a
+vendor behind one interface, and `ROADMAP.md` (Phase A) is the plan they
+belong to. Whether any vendor's backing is good enough is not yet known;
+finding out is what the blind test at the end is for.
+
+```bash
+producer spec --vocal take.wav                      # what the vocal measures: tempo, key, range, sections
+producer generate --vocal take.wav --style "warm lofi" --out-dir gen/      # candidates + ledger
+producer fit --vocal take.wav --candidate gen/cand_1.wav --out fitted.wav  # fit it, or REJECT with reasons
+producer song-from-vocal --vocal take.m4a --style "warm lofi" --workspace comparisons
+producer restyle --song comparisons/take --style "darker, slower"          # new backing, re-rendered
+producer gate --test blind/a.key.json responses/a --test blind/b.key.json responses/b ...
+```
+
+- **`spec`** reports each value as measured or as `null` with the reason under
+  `unmeasured`. An unaccompanied rap has no tempo and no key, and it says so
+  rather than guessing.
+- **`generate`** writes `cand_<n>.wav`, `generation.json` and an append-only
+  `ledger.jsonl`. A call that would take the ledger past
+  `MIXMAX_GEN_BUDGET_USD` (default 5.0) is refused before it is made.
+  `--backend fake` (the default) copies existing beats and costs nothing;
+  `--backend elevenlabs` is text-only and needs `ELEVENLABS_API_KEY`.
+- **`fit`** stretches a candidate up to 8% onto the vocal's tempo, shifts a
+  clashing key by up to 2 semitones, and rejects what it cannot repair. What
+  the vocal does not measure is listed as *not checked*, never as passed.
+- **`song-from-vocal`** runs intake, spec, generate, fit, the vocal chain,
+  combine, master and QA, and writes `<workspace>/<slug>/summary.json`. If no
+  candidate fits it exits non-zero with the reasons. It also builds a blind
+  test of the finished song against the generator's raw output over the dry
+  vocal, with the key outside the folder you share; `--publish-web web/public`
+  puts it on the hosted listening page.
+- **`restyle`** regenerates through the same `rebuild` the studio uses. It only
+  works on songs whose backing was generated here, so an uploaded beat is never
+  replaced.
+- **`gate`** applies the Phase A thresholds to the tallies: 5 vocals, 3
+  listeners each, median release score of 4 and the pipeline preferred. It
+  reports `incomplete` until the evidence is all in.
+
+Vendors, their terms and what is still unverified are in `docs/VENDORS.md`.
+The vendor adapter has only been exercised against constructed responses; its
+one live test runs with `pytest --live` and a key.
+
 ## The testing loop
 
 ```bash

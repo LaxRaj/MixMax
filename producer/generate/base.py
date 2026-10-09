@@ -12,7 +12,15 @@ class NotSupported(RuntimeError):
 
 
 class GenerationError(RuntimeError):
-    """A backend failed. The vendor's own message is carried verbatim."""
+    """A backend failed. The vendor's own message is carried verbatim.
+
+    `partial` holds any candidates that were generated, and paid for, before
+    the failure, so the caller can still put them in the ledger.
+    """
+
+    def __init__(self, message: str, partial: "list[GenResult] | None" = None) -> None:
+        super().__init__(message)
+        self.partial = partial or []
 
 
 @dataclass

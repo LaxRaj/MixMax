@@ -1100,6 +1100,8 @@ def generate_cmd(
         generator = get_generator(backend)
     except KeyError as exc:
         raise click.ClickException(exc.args[0]) from exc
+    except GenerationError as exc:
+        raise click.ClickException(str(exc)) from exc
 
     req = GenRequest(
         vocal=vocal, style=style, seed=seed, n_candidates=n_candidates,

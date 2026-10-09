@@ -5,7 +5,7 @@
 - **Product promise:** drop lyrics, a vocal, or a vocal-on-beat → get a full, mixed, mastered song → say what to change → get the next version.
 - **Source of truth:** this file plus `PLAN.md` (M0–M7, done). Execute with the `pm-swe-build-executor` loop: read plan → verify last green → build one milestone → verify → update boxes and decision log → commit `{id}: {deliverable}` → stop.
 - **Envelope:** each *phase* ≤ 2 weeks solo; each *milestone* ≤ 1 day. Total ≈ 8–9 weeks, **but Phase A is a hard gate** — nothing after it starts unless it passes.
-- **Status:** Phase A — in progress. G0 done. G1, G3 and G4 are built and tested on synthetic audio and one real vocal; what remains needs a vendor key, real vendor output and listeners (see each milestone's open boxes).
+- **Status:** Phase A — in progress. G0 done. G1, G3 and G4 are built and tested on synthetic audio and one real vocal; G2 has a vendor review and a text-only ElevenLabs adapter that has never been called live. What remains needs a vendor decision and key, real vendor output and listeners (see each milestone's open boxes). G5 has not been started: it is conditional on G4's gate passing.
 
 ## The one rule that governs the order
 
@@ -156,9 +156,9 @@ On **5 real vocals** across at least 3 genres, with ≥3 listeners per vocal:
   doc first. pytest -q must pass offline.
   ```
 - **Acceptance criteria:**
-  - [ ] `docs/VENDORS.md` exists with sources and dates for every claim
-  - [ ] One live generation succeeds and is recorded in the ledger with real cost
-  - [ ] Offline test suite green with recorded fixtures
+  - [x] `docs/VENDORS.md` exists with sources and dates for every claim — *written 2026-10-08 as a recommendation; choosing the vendor is still the owner's Step 0 decision*
+  - [ ] One live generation succeeds and is recorded in the ledger with real cost — *needs `ELEVENLABS_API_KEY`; then `pytest --live -k live_single`*
+  - [ ] Offline test suite green with recorded fixtures — *green, but against responses constructed from the documented API shape, not recordings; replace them after the first live call*
 - **Verify:** `pytest -q && producer generate --vocal <real vocal> --style "<style>" --out-dir /tmp/g2 --backend <vendor> --n 1`
 
 ### [ ] G3 — `fit`: make a candidate sit under the vocal, or reject it
@@ -596,3 +596,10 @@ On **5 real vocals** across at least 3 genres, with ≥3 listeners per vocal:
 2026-10-08 — Added `producer gate`, which applies the Phase A thresholds to the tallies and reports `incomplete` until 5 vocals each have 3 listeners. — The thresholds were written before any result; computing the decision keeps it from being argued after the fact. "Listeners prefer the pipeline" is read as more listeners ranking it above the raw output than below.
 2026-10-08 — The pipeline picks the first candidate that fits and passes QA. — Nothing measured here ranks two fitting candidates by how good they sound; choosing by a metric would be a verdict the pipeline cannot give. Hearing all three is C2's job.
 2026-10-08 — For a vocal with no measurable tempo or key, the pipeline finishes a song with every fit check skipped and says so. — Rejecting every a cappella rap would make the product useless for them, and passing them silently would hide that the riskiest assumption went untested; the notes in summary.json carry it to the listener test, which is the only check left.
+2026-10-08 — Vendor review written (`docs/VENDORS.md`); Suno and Udio disqualified for having no official API. — Every "Suno API" found is a reseller, some on the web app's private API; rights through a reseller are exactly the unclear commercial terms Step 0 rules out.
+2026-10-08 — No vendor is confirmed to condition on an uploaded vocal. Mureka's `track/generate` claims it but its request schema could not be read without an account, so no Mureka adapter was written. — Writing an adapter and fixtures against guessed fields would be inventing an API; the doc says "unverified" and names the page to read.
+2026-10-08 — Built the ElevenLabs Music adapter as the text-only path, ahead of the owner's vendor decision. — Its API is fully documented, its plan table is explicit that streaming rights start at Creator, and it lets the weak form of the riskiest assumption be tested today; it is one file behind the `Generator` protocol if the decision goes elsewhere.
+2026-10-08 — ElevenLabs cost is estimated from track length and `ELEVENLABS_MUSIC_USD_PER_MIN`, default $1.00/min, and every ledger line from it is flagged estimated. — The response does not report cost and no per-minute price was found; the default is deliberately high so three full-length candidates exceed the $5 budget and are refused until someone sets the real rate.
+2026-10-08 — Only HTTP 429 is retried; any other failure is surfaced with the vendor's own body. Candidates generated before a failure are still ledgered. — A failed call may have been billed; repeating it risks paying twice, and dropping the ones that succeeded would lose money from the books.
+2026-10-08 — The adapter's tests use constructed responses and say so; one `live` test exists and has not been run. — No key was available. Calling constructed bodies "recorded fixtures" would claim evidence that does not exist.
+2026-10-08 — Uses urllib, not requests or httpx. — `requests` is installed only as someone else's dependency; relying on it would be an undeclared dependency.

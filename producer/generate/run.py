@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from producer.generate.base import Generator, GenRequest, GenResult
+from producer.generate.base import GenerationError, Generator, GenRequest, GenResult
 from producer.generate.ledger import Ledger, check_budget
 
 GENERATION_FILE = "generation.json"
@@ -31,7 +31,13 @@ def generate_candidates(
     estimate = float(generator.estimate_cost(req))
     budget = check_budget(ledger.spent(), estimate)
 
-    results: list[GenResult] = generator.generate(req)
+    try:
+        results: list[GenResult] = generator.generate(req)
+    except GenerationError as exc:
+        # Whatever was generated before the failure was still paid for.
+        for result in exc.partial:
+            ledger.record(result, req)
+        raise
     for result in results:
         ledger.record(result, req)
 

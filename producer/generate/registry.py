@@ -7,7 +7,18 @@ from typing import Callable
 from producer.generate.base import Generator
 from producer.generate.fake import FakeGenerator
 
-_FACTORIES: dict[str, Callable[[], Generator]] = {"fake": FakeGenerator}
+
+def _elevenlabs() -> Generator:
+    # Imported on demand so a missing key is only an error when this backend is asked for.
+    from producer.generate.vendors.elevenlabs import ElevenLabsMusic
+
+    return ElevenLabsMusic()
+
+
+_FACTORIES: dict[str, Callable[[], Generator]] = {
+    "fake": FakeGenerator,
+    "elevenlabs": _elevenlabs,
+}
 
 
 def register(name: str, factory: Callable[[], Generator]) -> None:

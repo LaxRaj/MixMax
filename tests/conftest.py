@@ -12,6 +12,24 @@ FIXTURES = Path(__file__).parent / "fixtures"
 SR = 44100
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption("--live", action="store_true", default=False,
+                     help="Run tests marked `live`, which call a paid vendor API.")
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line("markers", "live: calls a real vendor API and costs money")
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    if config.getoption("--live"):
+        return
+    skip = pytest.mark.skip(reason="needs --live (calls a paid vendor API)")
+    for item in items:
+        if "live" in item.keywords:
+            item.add_marker(skip)
+
+
 def sine(freq: float, seconds: float, amplitude: float, sr: int = SR) -> np.ndarray:
     """A constant-amplitude sine, as float32 mono."""
     t = np.linspace(0.0, seconds, int(sr * seconds), endpoint=False)
