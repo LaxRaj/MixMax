@@ -495,6 +495,8 @@ class Syncer:
         values, recorded = effective(song_dir), load_recorded(song_dir)
         groups = []
         for group in GROUPS:
+            if not any(f.group == group for f in FIELDS):
+                continue    # text-only groups have no knob the studio can show yet
             applies, why_not = group_applies(song_dir, group, kind)
             label, about = GROUP_COPY[group]
             groups.append({

@@ -5,7 +5,7 @@
 - **Product promise:** drop lyrics, a vocal, or a vocal-on-beat → get a full, mixed, mastered song → say what to change → get the next version.
 - **Source of truth:** this file plus `PLAN.md` (M0–M7, done). Execute with the `pm-swe-build-executor` loop: read plan → verify last green → build one milestone → verify → update boxes and decision log → commit `{id}: {deliverable}` → stop.
 - **Envelope:** each *phase* ≤ 2 weeks solo; each *milestone* ≤ 1 day. Total ≈ 8–9 weeks, **but Phase A is a hard gate** — nothing after it starts unless it passes.
-- **Status:** Phase A — in progress. G0 done. G1 and G3 are built and tested; each has one check by ear still owed.
+- **Status:** Phase A — in progress. G0 done. G1, G3 and G4 are built and tested on synthetic audio and one real vocal; what remains needs a vendor key, real vendor output and listeners (see each milestone's open boxes).
 
 ## The one rule that governs the order
 
@@ -227,9 +227,9 @@ On **5 real vocals** across at least 3 genres, with ≥3 listeners per vocal:
   ```
 - **Experiment protocol (human):** run on 5 real vocals (≥3 genres); each gets ≥3 listeners via the existing hosted listening page; run `producer tally`; apply the Phase A gate above. Write the outcome as a decision-log entry with the numbers.
 - **Acceptance criteria:**
-  - [ ] End-to-end command works on a real vocal with the real vendor
+  - [ ] End-to-end command works on a real vocal with the real vendor — *works end to end on the real nani-ki-kahani voice memo with the fake backend handing back its real beat (55s, QA pass at -16.1 LUFS); the real-vendor run needs G2's key*
   - [ ] Blind tests published for 5 vocals; ≥15 total responses
-  - [ ] Gate decision recorded in the decision log (pass / fail / retry)
+  - [ ] Gate decision recorded in the decision log (pass / fail / retry) — *`producer gate` computes it from the tallies once they exist*
 - **Verify:** `pytest -q && producer song-from-vocal --vocal <real> --style "<style>" --workspace /tmp/sfv --backend <vendor> && test -s /tmp/sfv/*/summary.json`
 
 ### [ ] G5 — (only if G4 passes) Stems and arrangement from generated material
@@ -587,3 +587,12 @@ On **5 real vocals** across at least 3 genres, with ≥3 listeners per vocal:
 2026-10-08 — `fit` reports a candidate's key together with its relative. — A key and its relative share every note and chroma cannot separate them; naming one would be a coin toss presented as a measurement.
 2026-10-08 — What the vocal does not measure, `fit` does not check, and each pass says which checks were skipped. — nani-ki-kahani has no measurable tempo or key, so its real beat passes with tempo, key and alignment all unverified; a bare "passed" would read as though they had been.
 2026-10-08 — Vocal-band masking is reported and noted above -3 dB, never a rejection. — No listening result here says where masking becomes a fault, and a threshold picked without one would reject on a guess.
+2026-10-08 — Text settings are a separate `TextField` kind stored under `"text"` in settings.json, not numeric Fields. — A style is words; `Field` is a range with a step, and the studio's knobs and `validate_changes` both assume numbers. `validate_text`, `load_text`, `save_text` and `apply_text` are the whole mechanism.
+2026-10-08 — The `generate` stage only runs for songs whose backing was generated here, and only when a rebuild starts at `generate`. — Regenerating replaces beat.wav; without the guard a rebuild could overwrite a beat someone wrote, bought or uploaded.
+2026-10-08 — `generated/` always holds the latest generation attempt, including a failed one; the song's own audio changes only when a rebuild succeeds. — Money spent on candidates that then fit nothing was still spent, and the ledger and the rejects are the record of it.
+2026-10-08 — The studio payload skips settings groups with no numeric field. — `generate` has only text settings and the web app renders knobs; publishing an empty group would change the studio before Phase C designs it.
+2026-10-08 — The blind test's baseline is the vocal as recorded over the backing as generated, at the same loudness gap, with no ducking. — "Vendor raw" has to include the vocal to be a song at all; keeping the balance equal makes the comparison about fit, the vocal chain, ducking and mastering rather than about level.
+2026-10-08 — The Phase A questions reuse the existing scoresheet columns: `release_ready_1_5` and `rank`. — "Would you release this?" and "which sounds more finished?" are what those columns and the hosted page already ask, so `tally` and the listening app need no change.
+2026-10-08 — Added `producer gate`, which applies the Phase A thresholds to the tallies and reports `incomplete` until 5 vocals each have 3 listeners. — The thresholds were written before any result; computing the decision keeps it from being argued after the fact. "Listeners prefer the pipeline" is read as more listeners ranking it above the raw output than below.
+2026-10-08 — The pipeline picks the first candidate that fits and passes QA. — Nothing measured here ranks two fitting candidates by how good they sound; choosing by a metric would be a verdict the pipeline cannot give. Hearing all three is C2's job.
+2026-10-08 — For a vocal with no measurable tempo or key, the pipeline finishes a song with every fit check skipped and says so. — Rejecting every a cappella rap would make the product useless for them, and passing them silently would hide that the riskiest assumption went untested; the notes in summary.json carry it to the listener test, which is the only check left.
